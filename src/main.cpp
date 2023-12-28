@@ -3,6 +3,7 @@
 #include <ESPmDNS.h>
 #include <WiFiUdp.h>
 #include "ArduinoOTA.h"
+#include <Adafruit_NeoPixel.h>
 
 #include <Credentials.h>
 
@@ -10,11 +11,16 @@
 const char *ssid = WIFI_SSID;
 const char *password = WIFI_PW;
 
-// variabls for blinking an LED with Millis
+// Blink LED
 const int led = 2;                // ESP32 Pin to which onboard LED is connected
 unsigned long previousMillis = 0; // will store last time LED was updated
 const long interval = 1000;       // interval at which to blink (milliseconds)
 int ledState = LOW;               // ledState used to set the LED
+
+// Neopixels
+#define PIN_NEO_PIXEL 16 // The ESP32 pin GPIO16 connected to NeoPixel
+#define NUM_PIXELS 4     // The number of LEDs (pixels) on NeoPixel LED strip
+Adafruit_NeoPixel NeoPixel(NUM_PIXELS, PIN_NEO_PIXEL, NEO_GRBW + NEO_KHZ800);
 
 // put function declarations here:
 int myFunction(int, int);
@@ -68,8 +74,13 @@ void setup()
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
+  // Neopixels
+  NeoPixel.begin(); // initialize NeoPixel strip object (REQUIRED)
+
   // Real code here
-  int result = myFunction(2, 3);
+  // int result = myFunction(2, 3);
+
+  // Blink LED
   pinMode(led, OUTPUT);
 }
 
@@ -77,8 +88,6 @@ void loop()
 {
   // OTA
   ArduinoOTA.handle();
-
-  // put your main code here, to run repeatedly:
 
   // loop to blink without delay
   unsigned long currentMillis = millis();
@@ -92,6 +101,13 @@ void loop()
     ledState = not(ledState);
     // set the LED with the ledState of the variable:
     digitalWrite(led, ledState);
+
+    NeoPixel.clear();
+    NeoPixel.setPixelColor(0, NeoPixel.Color(10, 0, 0, 0));
+    NeoPixel.setPixelColor(1, NeoPixel.Color(0, 10, 0, 0));
+    NeoPixel.setPixelColor(2, NeoPixel.Color(0, 0, 10, 0));
+    NeoPixel.setPixelColor(3, NeoPixel.Color(0, 0, 0, 10));
+    NeoPixel.show();
   }
 }
 
