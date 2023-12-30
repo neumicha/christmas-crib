@@ -1,5 +1,6 @@
 # Custom
 include/Credentials.h
+audio
 
 # VSC: PlatformIO
 .pio

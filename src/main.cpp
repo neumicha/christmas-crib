@@ -1,15 +1,38 @@
 #include <Arduino.h>
-#include "WiFi.h"
+#include <stdlib.h>
+#include <WiFi.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
 #include <ESPmDNS.h>
 #include <WiFiUdp.h>
 #include "ArduinoOTA.h"
 #include <Adafruit_NeoPixel.h>
 
 #include <Credentials.h>
+#include "SPIFFS.h"
+#include <Arduino_JSON.h>
+#include <string>
+#include "Audio.h"
 
 // WiFi network credentials
 const char *ssid = WIFI_SSID;
 const char *password = WIFI_PW;
+
+// Webserver
+AsyncWebServer server(80);
+AsyncWebSocket ws("/ws");
+String message = "";
+String sliderValue1 = "0";
+String sliderValue2 = "0";
+String sliderValue3 = "0";
+String color1value = "0";
+byte r, g, b;
+int dutyCycle1;
+int dutyCycle2;
+int dutyCycle3;
+const int resolution = 8;
+// Json Variable to Hold Slider Values
+JSONVar sliderValues;
 
 // Blink LED
 const int led = 2;                // ESP32 Pin to which onboard LED is connected
@@ -22,14 +45,133 @@ int ledState = LOW;               // ledState used to set the LED
 #define NUM_PIXELS 4     // The number of LEDs (pixels) on NeoPixel LED strip
 Adafruit_NeoPixel NeoPixel(NUM_PIXELS, PIN_NEO_PIXEL, NEO_GRBW + NEO_KHZ800);
 
-// put function declarations here:
-int myFunction(int, int);
+// Audio
+// I2S Connection
+#define I2S_DOUT 18
+#define I2S_BCLK 19
+#define I2S_LRC 21
+// Audio object
+Audio audio;
+// Volume
+int audioVolume = 5;
+
+// Get Slider Values
+String getSliderValues()
+{
+  sliderValues["sliderValue1"] = String(sliderValue1);
+  sliderValues["sliderValue2"] = String(sliderValue2);
+  sliderValues["sliderValue3"] = String(sliderValue3);
+  String jsonString = JSON.stringify(sliderValues);
+  return jsonString;
+}
+
+// Initialize SPIFFS
+void initFS()
+{
+  // SPIFFS.begin(true); // TODO: Is this sometimes needed? https://github.com/espressif/arduino-esp32/issues/638
+  if (!SPIFFS.begin())
+  {
+    Serial.println("An error has occurred while mounting SPIFFS");
+  }
+  else
+  {
+    Serial.println("SPIFFS mounted successfully");
+  }
+}
+
+void notifyClients(String sliderValues)
+{
+  ws.textAll(sliderValues);
+}
+
+void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
+{
+  AwsFrameInfo *info = (AwsFrameInfo *)arg;
+  if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)
+  {
+    data[len] = 0;
+    message = (char *)data;
+    if (message.indexOf("1s") >= 0)
+    {
+      sliderValue1 = message.substring(2);
+      dutyCycle1 = map(sliderValue1.toInt(), 0, 100, 0, 255);
+      Serial.println(dutyCycle1);
+      Serial.print(getSliderValues());
+      notifyClients(getSliderValues());
+    }
+    if (message.indexOf("2s") >= 0)
+    {
+      sliderValue2 = message.substring(2);
+      dutyCycle2 = map(sliderValue2.toInt(), 0, 100, 0, 255);
+      Serial.println(dutyCycle2);
+      Serial.print(getSliderValues());
+      notifyClients(getSliderValues());
+    }
+    if (message.indexOf("3s") >= 0)
+    {
+      sliderValue3 = message.substring(2);
+      dutyCycle3 = map(sliderValue3.toInt(), 0, 100, 0, 255);
+      Serial.println(dutyCycle3);
+      Serial.print(getSliderValues());
+      notifyClients(getSliderValues());
+    }
+    if (message.indexOf("color1") >= 0) // TODO Make this prettier
+    {
+      color1value = message.substring(8); // TODO Make this prettier (length of color1 + 2 for =#)
+      Serial.println("Color1 value set: " + color1value);
+      notifyClients(getSliderValues()); // TODO Fix this
+    }
+    if (message.indexOf("sound1play") >= 0) // TODO Prettify this
+    {
+      Serial.println("Play sound1");
+      // Open music file
+      // audio.connecttohost("http://stream.antennethueringen.de/live/aac-64/stream.antennethueringen.de/");
+      audio.connecttoFS(SPIFFS, "/audio/test.mp3");
+    }
+    // sound1volume
+    if (message.indexOf("sound1volume") >= 0)
+    {
+      Serial.println("Set volume of sound1");
+      audio.setVolume(message.substring(13).toInt());
+    }
+    if (strcmp((char *)data, "getValues") == 0)
+    {
+      notifyClients(getSliderValues());
+    }
+  }
+}
+void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
+{
+  switch (type)
+  {
+  case WS_EVT_CONNECT:
+    Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+    break;
+  case WS_EVT_DISCONNECT:
+    Serial.printf("WebSocket client #%u disconnected\n", client->id());
+    break;
+  case WS_EVT_DATA:
+    handleWebSocketMessage(arg, data, len);
+    break;
+  case WS_EVT_PONG:
+  case WS_EVT_ERROR:
+    break;
+  }
+}
+
+void initWebSocket()
+{
+  ws.onEvent(onEvent);
+  server.addHandler(&ws);
+}
 
 void setup()
 {
   // Init serial interface
   Serial.begin(115200);
   Serial.println("Booting");
+
+  initFS();
 
   // Connect WiFi
   WiFi.mode(WIFI_STA);
@@ -74,14 +216,52 @@ void setup()
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
+  // Webserver
+  initWebSocket();
+
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+              Serial.println("ESP32 Web Server: Send index.html");
+              request->send(SPIFFS, "/webserver/index.html", "text/html"); });
+  server.serveStatic("/", SPIFFS, "/webserver/");
+
+  // 404 and 405 error handler
+  server.onNotFound([](AsyncWebServerRequest *request)
+                    {
+    if (request->method() == HTTP_GET) {
+      // Handle 404 Not Found error
+      Serial.println("Web Server: Not Found");
+      request->send(404, "text/html", "Error 404");
+    } else {
+      // Handle 405 Method Not Allowed error
+      Serial.println("Web Server: Method Not Allowed");
+      request->send(405, "text/html", "Error 405");
+    } });
+
+  server.begin();
+
   // Neopixels
   NeoPixel.begin(); // initialize NeoPixel strip object (REQUIRED)
+
+  // Audio
+  // Setup I2S
+  audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
+  // Set Volume
+  audio.setVolume(audioVolume);
 
   // Real code here
   // int result = myFunction(2, 3);
 
   // Blink LED
   pinMode(led, OUTPUT);
+}
+
+void getRGB(const char *text, byte &r, byte &g, byte &b)
+{
+  long l = strtol(text + 1, NULL, 16);
+  r = l >> 16;
+  g = l >> 8;
+  b = l;
 }
 
 void loop()
@@ -102,17 +282,102 @@ void loop()
     // set the LED with the ledState of the variable:
     digitalWrite(led, ledState);
 
+    // Neopixel
     NeoPixel.clear();
-    NeoPixel.setPixelColor(0, NeoPixel.Color(10, 0, 0, 0));
-    NeoPixel.setPixelColor(1, NeoPixel.Color(0, 10, 0, 0));
-    NeoPixel.setPixelColor(2, NeoPixel.Color(0, 0, 10, 0));
-    NeoPixel.setPixelColor(3, NeoPixel.Color(0, 0, 0, 10));
+    NeoPixel.setPixelColor(0, NeoPixel.Color(127, 0, 0, 0));
+    Serial.println("Color1Val: " + color1value);
+    getRGB(color1value.c_str(), r, g, b);
+    String red = color1value.substring(0, 2);
+    String green = color1value.substring(2, 4);
+    String blue = color1value.substring(4, 6);
+    Serial.print("red: ");
+    Serial.println(r);
+    Serial.print("green: ");
+    Serial.println(g);
+    Serial.print("blue: ");
+    Serial.println(b);
+    // Serial.println("red: " + red);
+    // Serial.println("green: " + green);
+    // Serial.println("blue: " + blue);
+    // uint8_t red2 = stoi(red.c_str(), red.c_str()+2, 16);
+    // uint8_t green2 = strtol(green.c_str(), &blue.c_str(), 16);
+    // uint8_t blue2 = strtol(blue.c_str(), NULL, 16);
+    // Serial.println("red2: " + red2);
+    // Serial.println("green2: " + green2);
+
+    NeoPixel.setPixelColor(1, NeoPixel.Color(r, g, b, 0));
+    NeoPixel.setPixelColor(2, NeoPixel.Color(0, 0, 0, 0));
+    NeoPixel.setPixelColor(3, NeoPixel.Color(0, 0, 0, 0));
+    NeoPixel.setBrightness(dutyCycle1);
     NeoPixel.show();
   }
+
+  // Webserver
+  ws.cleanupClients();
+
+  // Audio
+  audio.loop();
 }
 
 // put function definitions here:
 int myFunction(int x, int y)
 {
   return x + y;
+}
+
+// Audio stuff (optional)
+void audio_info(const char *info)
+{
+  Serial.print("info        ");
+  Serial.println(info);
+}
+void audio_id3data(const char *info)
+{ // id3 metadata
+  Serial.print("id3data     ");
+  Serial.println(info);
+}
+void audio_eof_mp3(const char *info)
+{ // end of file
+  Serial.print("eof_mp3     ");
+  Serial.println(info);
+}
+void audio_showstation(const char *info)
+{
+  Serial.print("station     ");
+  Serial.println(info);
+}
+void audio_showstreaminfo(const char *info)
+{
+  Serial.print("streaminfo  ");
+  Serial.println(info);
+}
+void audio_showstreamtitle(const char *info)
+{
+  Serial.print("streamtitle ");
+  Serial.println(info);
+}
+void audio_bitrate(const char *info)
+{
+  Serial.print("bitrate     ");
+  Serial.println(info);
+}
+void audio_commercial(const char *info)
+{ // duration in sec
+  Serial.print("commercial  ");
+  Serial.println(info);
+}
+void audio_icyurl(const char *info)
+{ // homepage
+  Serial.print("icyurl      ");
+  Serial.println(info);
+}
+void audio_lasthost(const char *info)
+{ // stream URL played
+  Serial.print("lasthost    ");
+  Serial.println(info);
+}
+void audio_eof_speech(const char *info)
+{
+  Serial.print("eof_speech  ");
+  Serial.println(info);
 }
