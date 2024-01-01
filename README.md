@@ -4,6 +4,7 @@ ESP32 Christmas Crib with support for:
 - Audio (e.g. mp3) playback
 
 ## TODOs
+- Create Favicon
 - Flickering lights
 - Save settings
 - Enable WebSerial: https://randomnerdtutorials.com/esp32-webserial-library/

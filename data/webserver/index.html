@@ -1,72 +1,162 @@
 <!-- Complete project details: https://randomnerdtutorials.com/esp32-web-server-websocket-sliders/ -->
 
 <!DOCTYPE html>
-<html>
+<html lang="de">
 
 <head>
-    <title>Christmas Crib Dashboard</title>
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="stylesheet" type="text/css" href="style.css">
+    <title>Weihnachtskrippe - Dashboard</title>
 </head>
 
 <body>
     <div class="topnav">
-        <h1>Christmas Crib Dashboard - by Michael Neumann</h1>
+        <h1>Weihnachtskrippe Dashboard - by Michael Neumann</h1>
     </div>
-    <div class="content">
-        <div class="card-grid">
-            <div class="card">
-                <p class="card-title">Gesamthelligkeit</p>
-                <p class="switch">
-                    <input type="range" onchange="updateSliderPWM(this)" id="slider1" min="0" max="100" step="1"
-                        value="0" class="slider">
-                </p>
-                <p class="state">Brightness: <span id="sliderValue1"></span> &percnt;</p>
-            </div>
-            <div class="card">
-                <p class="card-title"> Fader 2</p>
-                <p class="switch">
-                    <input type="range" onchange="updateSliderPWM(this)" id="slider2" min="0" max="100" step="1"
-                        value="0" class="slider">
-                </p>
-                <p class="state">Brightness: <span id="sliderValue2"></span> &percnt;</p>
-            </div>
-            <div class="card">
-                <p class="card-title"> Fader 3</p>
-                <p class="switch">
-                    <input type="range" onchange="updateSliderPWM(this)" id="slider3" min="0" max="100" step="1"
-                        value="0" class="slider">
-                </p>
-                <p class="state">Brightness: <span id="sliderValue3"></span></p>
-            </div>
-            <div class="card">
-                <p class="card-title"> Hauptfarbe</p>
-                <p class="switch">
-                    <input type="color" onchange="updateColor(this)" id="color1" value="0">
-                </p>
-                <p class="state">Aktuell: <span id="color1value"></span> &percnt;</p>
-            </div>
-            <div class="card">
-                <p class="card-title"> Sound</p>
-                <p class="switch">
-                    <input type="button" onclick="playSound(this)" id="sound1play" value="Play">
-                </p>
-                <p class="switch">
-                    <input type="range" onchange="updateVolume(this)" id="sound1volume" min="0" max="21" step="1"
-                        value="5" class="slider">
-                </p>
-                <p class="state">Volume: <span id="sound1volumevalue"></span></p>
-            </div>
-            <div class="card">
-                <p class="card-title"> Motor</p>
-                <p class="switch">
-                    <input type="range" onchange="updateStepperSpeed(this)" id="stepper1" min="0" max="10" step="1"
-                        value="0" class="slider">
-                </p>
-                <p class="state">Speed: <span id="stepper1value"></span></p>
+
+
+
+    <div class="tab">
+        <button class="tablinks" onclick="openTab(event, 'Default')" id="defaultTab">Standard</button>
+        <button class="tablinks" onclick="openTab(event, 'Disco')">Disco</button>
+    </div>
+
+    <div id="Default" class="tabcontent">
+        <h3>Standard</h3>
+        <p>Einstellungen für die Standardszene</p>
+
+        <div class="content">
+            <div class="card-grid">
+                <div class="card">
+                    <p class="card-title">Innenbeleuchtung</p>
+                    <p class="state">Farbe: <span id="color1RGBValue"></span></p>
+                    <p class="switch">
+                        <input type="color" onchange="updateColorRGB(this)" id="color1RGB" value="0">
+                    </p>
+                    <p class="state">Weiß: <span id="color1WhiteValue"></span> %</p>
+                    <p class="switch">
+                        <input type="range" onchange="updateColorWhite(this)" id="color1White" min="0" max="100"
+                            step="1" value="0" class="slider">
+                    </p>
+                </div>
+                <div class="card">
+                    <p class="card-title">Jesuskind</p>
+                    <p class="state">Farbe: <span id="color2RGBValue"></span></p>
+                    <p class="switch">
+                        <input type="color" onchange="updateColorRGB(this)" id="color2RGB" value="0">
+                    </p>
+                    <p class="state">Weiß: <span id="color2WhiteValue"></span> %</p>
+                    <p class="switch">
+                        <input type="range" onchange="updateColorWhite(this)" id="color2White" min="0" max="100"
+                            step="1" value="0" class="slider">
+                    </p>
+                </div>
+                <div class="card">
+                    <p class="card-title">Discokugel</p>
+                    <p class="state">Farbe: <span id="color3RGBValue"></span></p>
+                    <p class="switch">
+                        <input type="color" onchange="updateColorRGB(this)" id="color3RGB" value="0">
+                    </p>
+                    <p class="state">Weiß: <span id="color3WhiteValue"></span> %</p>
+                    <p class="switch">
+                        <input type="range" onchange="updateColorWhite(this)" id="color3White" min="0" max="100"
+                            step="1" value="0" class="slider">
+                    </p>
+                    <p class="state">Geschwindigkeit: <span id="stepper1SpeedValue"></span> U/min</p>
+                    <p class="switch">
+                        <input type="range" onchange="updateStepperSpeed(this)" id="stepper1Speed" min="0" max="10"
+                            step="1" value="0" class="slider">
+                    </p>
+                </div>
+                <div class="card">
+                    <p class="card-title">Klohaus</p>
+                    <p class="state">Farbe: <span id="color4RGBValue"></span></p>
+                    <p class="switch">
+                        <input type="color" onchange="updateColorRGB(this)" id="color4RGB" value="0">
+                    </p>
+                    <p class="state">Weiß: <span id="color4WhiteValue"></span> %</p>
+                    <p class="switch">
+                        <input type="range" onchange="updateColorWhite(this)" id="color4White" min="0" max="100"
+                            step="1" value="0" class="slider">
+                    </p>
+                </div>
+                <div class="card">
+                    <p class="card-title">Laterne</p>
+                    TODO
+                </div>
+                <div class="card">
+                    <p class="card-title">Feuerstelle</p>
+                    TODO
+                </div>
+                <div class="card">
+                    <p class="card-title">Sound</p>
+                    <p class="state">Quelle: <span id="sound1SourceValue"></span></p>
+                    <select name="cars" id="cars">
+                        <option value="int:christmas">Weihnachten</option>
+                        <option
+                            value="http:http://stream.antennethueringen.de/live/aac-64/stream.antennethueringen.de/">
+                            Antenne Thüringen</option>
+                        <option value="http:https://stream.antenne.de/antenne/stream/mp3">Antenne Bayern</option>
+                    </select>
+                    <p class="state">Lautstärke: <span id="sound1VolumeValue"></span>/21</p>
+                    <p class="switch">
+                        <input type="range" onchange="updateVolume(this)" id="sound1Volume" min="0" max="21" step="1"
+                            value="5" class="slider">
+                    </p>
+                    <p class="state">Status: <span id="sound1SourceValue"></span></p>
+                    <p class="switch">
+                        <input type="button" onclick="playSound(this)" id="sound1Play" value="Abspielen">
+                        <input type="button" onclick="playSound(this)" id="sound1Stop" value="Stoppen">
+                    </p>
+                </div>
+
+
+
+
+                <div class="card">
+                    <p class="card-title"> Fader 2</p>
+                    <p class="switch">
+                        <input type="range" onchange="updateSliderPWM(this)" id="slider2" min="0" max="100" step="1"
+                            value="0" class="slider">
+                    </p>
+                    <p class="state">Brightness: <span id="sliderValue2"></span> &percnt;</p>
+                </div>
+                <div class="card">
+                    <p class="card-title"> Fader 3</p>
+                    <p class="switch">
+                        <input type="range" onchange="updateSliderPWM(this)" id="slider3" min="0" max="100" step="1"
+                            value="0" class="slider">
+                    </p>
+                    <p class="state">Brightness: <span id="sliderValue3"></span></p>
+                </div>
+                <div class="card">
+                    <p class="card-title"> Hauptfarbe</p>
+                    <p class="switch">
+                        <input type="color" onchange="updateColor(this)" id="color1" value="0">
+                    </p>
+                    <p class="state">Aktuell: <span id="color1value"></span> &percnt;</p>
+                </div>
+                <div class="card">
+                    <p class="card-title"> Sound</p>
+                    <p class="switch">
+                        <input type="button" onclick="playSound(this)" id="sound1play" value="Play">
+                    </p>
+                    <p class="switch">
+                        <input type="range" onchange="updateVolume(this)" id="sound1volume" min="0" max="21" step="1"
+                            value="5" class="slider">
+                    </p>
+                    <p class="state">Volume: <span id="sound1volumevalue"></span></p>
+                </div>
             </div>
         </div>
+    </div>
+
+
+    <div id="Disco" class="tabcontent">
+        <h3>Disco</h3>
+        <p>Paris is the capital of France.</p>
     </div>
     <script src="script.js"></script>
 </body>

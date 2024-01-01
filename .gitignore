@@ -1,6 +1,7 @@
 # Custom
 include/Credentials.h
-audio
+data/audio
+data/webserver/favicon.png
 
 # VSC: PlatformIO
 .pio

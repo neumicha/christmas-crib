@@ -15,6 +15,8 @@
 #include "Audio.h"
 #include <AccelStepper.h>
 
+#include <Preferences.h>
+
 // WiFi network credentials
 const char *ssid = WIFI_SSID;
 const char *password = WIFI_PW;
@@ -65,6 +67,8 @@ const int stepper1max = 10;
 const int stepper1sps = 2048 / 60; // steps per second for one revolution
 int stepper1speed;
 AccelStepper stepper1(AccelStepper::FULL4WIRE, STEPPER1_IN1, STEPPER1_IN3, STEPPER1_IN2, STEPPER1_IN4);
+
+Preferences preferences;
 
 // Get Slider Values
 String getSliderValues()
@@ -154,6 +158,15 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
       stepper1.setSpeed(stepper1sps * stepper1speed);
       // TODO Check if speed is over max!
     }
+    /*
+    // Save preferences
+    if (message.indexOf("save") >= 0)
+    {
+      Serial.print("Saving...");
+      preferences.putString();
+      jsonString.
+      JSONVar
+    }*/
     if (strcmp((char *)data, "getValues") == 0)
     {
       notifyClients(getSliderValues());
@@ -190,6 +203,8 @@ void setup()
   // Init serial interface
   Serial.begin(115200);
   Serial.println("Booting");
+  Serial.print("Flash: ");
+  Serial.println(ESP.getFlashChipSize());
 
   initFS();
 
@@ -275,7 +290,10 @@ void setup()
   // Stepper
   stepper1.setMaxSpeed(stepper1sps * stepper1max);
   stepper1.setSpeed(stepper1sps * stepper1speed);
-  // TODO set some kind of acceleration
+
+  // Preferences
+  preferences.begin("c-crib", false);
+  preferences.putString("source1", "int:hallo");
 
   // Blink LED
   pinMode(led, OUTPUT);
@@ -335,6 +353,9 @@ void loop()
     NeoPixel.setPixelColor(3, NeoPixel.Color(0, 0, 0, 0));
     NeoPixel.setBrightness(dutyCycle1);
     NeoPixel.show();
+
+    Serial.print("Preference: ");
+    Serial.println(preferences.getString("source1"));
   }
 
   // Webserver
