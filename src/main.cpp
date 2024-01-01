@@ -16,6 +16,7 @@
 #include <AccelStepper.h>
 
 #include <Preferences.h>
+#include "CCSettings.h"
 
 // WiFi network credentials
 const char *ssid = WIFI_SSID;
@@ -36,6 +37,7 @@ int dutyCycle3;
 const int resolution = 8;
 // Json Variable to Hold Slider Values
 JSONVar sliderValues;
+CCSettings ccSettings;
 
 // Blink LED
 const int led = 2;                // ESP32 Pin to which onboard LED is connected
@@ -205,6 +207,15 @@ void setup()
   Serial.println("Booting");
   Serial.print("Flash: ");
   Serial.println(ESP.getFlashChipSize());
+
+  Serial.println("Loading preferences");
+  // TODO Really load them
+  // And close Perferences afterwards...
+  ccSettings.color1RGB = "abc";
+  ccSettings.color1White = 50;
+
+  Serial.println("Settings:");
+  Serial.println(ccSettings.toString());
 
   initFS();
 
