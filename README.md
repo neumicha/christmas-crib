@@ -12,6 +12,20 @@ ESP32 Christmas Crib with support for:
 
 ## How-To
 
+### Connect everything
+|ESP32 Pin|Connected to|
+|--------|--------|
+| D16 | Neopixel LED - Data |
+| D18 | Max98357A - LRC |
+| D19 | Max98357A - BCLK |
+| D21 | Max98357A - DIN |
+| D25 | ULN2003 - IN1 |
+| D26 | ULN2003 - IN2 |
+| D27 | ULN2003 - IN3 |
+| D14 | ULN2003 - IN4 |
+
+Furthermore, connect SD of Max98357A to 5V.
+
 ### Access the web interface
 The web interface can be accessed via ip-address or via [http://christmas-crib/](http://christmas-crib/)
 
