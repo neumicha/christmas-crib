@@ -52,6 +52,11 @@ function updateVolume(element) {
   websocket.send(element.id + "=" + element.value.toString());
 }
 
+function updateStepperSpeed(element) {
+  document.getElementById(element.id + "value").innerHTML = element.value;
+  websocket.send(element.id + "=" + element.value.toString());
+}
+
 function onMessage(event) {
   console.log(event.data);
   var myObj = JSON.parse(event.data);

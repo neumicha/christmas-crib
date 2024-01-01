@@ -13,6 +13,7 @@
 #include <Arduino_JSON.h>
 #include <string>
 #include "Audio.h"
+#include <AccelStepper.h>
 
 // WiFi network credentials
 const char *ssid = WIFI_SSID;
@@ -54,6 +55,16 @@ Adafruit_NeoPixel NeoPixel(NUM_PIXELS, PIN_NEO_PIXEL, NEO_GRBW + NEO_KHZ800);
 Audio audio;
 // Volume
 int audioVolume = 5;
+
+// Stepper Motor Driver ULN2003
+#define STEPPER1_IN1 25
+#define STEPPER1_IN2 26
+#define STEPPER1_IN3 27
+#define STEPPER1_IN4 14
+const int stepper1max = 10;
+const int stepper1sps = 2048 / 60; // steps per second for one revolution
+int stepper1speed;
+AccelStepper stepper1(AccelStepper::FULL4WIRE, STEPPER1_IN1, STEPPER1_IN3, STEPPER1_IN2, STEPPER1_IN4);
 
 // Get Slider Values
 String getSliderValues()
@@ -133,6 +144,15 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
     {
       Serial.println("Set volume of sound1");
       audio.setVolume(message.substring(13).toInt());
+    }
+    // stepper1speed
+    if (message.indexOf("stepper1") >= 0)
+    {
+      Serial.print("Setting speed of stepper1 to: ");
+      Serial.println(message.substring(9).toInt());
+      stepper1speed = message.substring(9).toInt();
+      stepper1.setSpeed(stepper1sps * stepper1speed);
+      // TODO Check if speed is over max!
     }
     if (strcmp((char *)data, "getValues") == 0)
     {
@@ -252,6 +272,11 @@ void setup()
   // Real code here
   // int result = myFunction(2, 3);
 
+  // Stepper
+  stepper1.setMaxSpeed(stepper1sps * stepper1max);
+  stepper1.setSpeed(stepper1sps * stepper1speed);
+  // TODO set some kind of acceleration
+
   // Blink LED
   pinMode(led, OUTPUT);
 }
@@ -317,6 +342,9 @@ void loop()
 
   // Audio
   audio.loop();
+
+  // Stepper
+  stepper1.runSpeed();
 }
 
 // put function definitions here:

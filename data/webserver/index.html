@@ -58,6 +58,14 @@
                 </p>
                 <p class="state">Volume: <span id="sound1volumevalue"></span></p>
             </div>
+            <div class="card">
+                <p class="card-title"> Motor</p>
+                <p class="switch">
+                    <input type="range" onchange="updateStepperSpeed(this)" id="stepper1" min="0" max="10" step="1"
+                        value="0" class="slider">
+                </p>
+                <p class="state">Speed: <span id="stepper1value"></span></p>
+            </div>
         </div>
     </div>
     <script src="script.js"></script>

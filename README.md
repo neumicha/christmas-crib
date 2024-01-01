@@ -4,7 +4,8 @@ ESP32 Christmas Crib with support for:
 - Audio (e.g. mp3) playback
 
 ## TODOs
-- Connect stepper
+- Flickering lights
+- Save settings
 - Enable WebSerial: https://randomnerdtutorials.com/esp32-webserial-library/
 - Fix instability of OTA programming
 - Finalize everything (make it production ready)
@@ -36,5 +37,7 @@ Add the following lines to your `dev` in `platformio.ini`:
 - Use good power supply (USB of laptop might not be sufficient)
 
 ## Ressources
+- ESP32 Pinout: [1](https://www.electronicshub.org/esp32-pinout/), [2](https://randomnerdtutorials.com/esp32-pinout-reference-gpios/), [3](https://circuits4you.com/2018/12/31/esp32-devkit-esp32-wroom-gpio-pinout/)
 - [Websocket + Sliders](https://randomnerdtutorials.com/esp32-web-server-websocket-sliders/)
 - [Color Picker](https://randomnerdtutorials.com/esp32-esp8266-rgb-led-strip-web-server/)
+- [Fire simulation](https://www.az-delivery.de/blogs/azdelivery-blog-fur-arduino-und-raspberry-pi/mehrere-feuer-programme-fuer-unsere-stimmungslaterne)
