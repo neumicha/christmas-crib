@@ -108,6 +108,33 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
   {
     data[len] = 0;
     message = (char *)data;
+    Serial.print("Handling websocket message");
+    const char ind_preset = message.indexOf("p=");
+    if (ind_preset == 0)
+    { // new format with presets
+      long preset = message.substring(ind_preset + 2, ind_preset + 3).toInt();
+      String keyAndValue = message.substring(ind_preset + 4); // Part after "&"
+      const char ind_equals = keyAndValue.indexOf("=");
+      String key = keyAndValue.substring(0, ind_equals - 1);
+      uint8_t keyIndex = keyAndValue.substring(ind_equals - 1, ind_equals).toInt();
+      String value = keyAndValue.substring(ind_equals + 1);
+      // TODO Pay attention when receiving that fancy start/stop hack
+      Serial.println("Received the following command:");
+      Serial.print("Preset ");
+      Serial.println(preset);
+      Serial.print("Key ");
+      Serial.println(key);
+      Serial.print("Value ");
+      Serial.println(value);
+      if (key == "lRgb")
+      {
+        Serial.print("Handle Light(RGB) with Index ");
+        Serial.println(keyIndex);
+        ccSettings.lRgb[keyIndex] = value.substring(1);
+        // TODO Implement this
+      }
+      // TODO Implement other cases (white, motors, ...) and update those things after change
+    }
     if (message.indexOf("1s") >= 0)
     {
       sliderValue1 = message.substring(2);
@@ -209,24 +236,25 @@ void setup()
   Serial.println(ESP.getFlashChipSize());
 
   Serial.println("Loading preferences");
+
   // TODO Really load them
   // And close Perferences afterwards...
-  ccSettings.color1RGB = "abc";
-  ccSettings.color1White = 50;
-
   Serial.println("Settings:");
   Serial.println(ccSettings.toString());
+
+  ccSettings.lRgb[0] = "abc";
+  ccSettings.lWhite[0] = 50;
 
   initFS();
 
   // Connect WiFi
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
-  Serial.println("Connecting to WiFi ..");
+  Serial.println("Connecting to WiFi: ");
   while (WiFi.status() != WL_CONNECTED)
   {
-    Serial.println('.');
-    delay(100);
+    Serial.print('.');
+    delay(500);
   }
   Serial.println("WiFi connected!");
 
@@ -367,6 +395,8 @@ void loop()
 
     Serial.print("Preference: ");
     Serial.println(preferences.getString("source1"));
+    Serial.println("Settings:");
+    Serial.println(ccSettings.toString());
   }
 
   // Webserver

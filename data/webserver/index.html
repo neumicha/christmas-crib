@@ -19,8 +19,8 @@
 
 
     <div class="tab">
-        <button class="tablinks" onclick="openTab(event, 'Default')" id="defaultTab">Standard</button>
-        <button class="tablinks" onclick="openTab(event, 'Disco')">Disco</button>
+        <button class="tablinks" onclick="selectPreset(event, 'Default')" id="1select">Standard</button>
+        <button class="tablinks" onclick="selectPreset(event, 'Disco')" id="2select">Disco</button>
     </div>
 
     <div id="Default" class="tabcontent">
@@ -31,55 +31,55 @@
             <div class="card-grid">
                 <div class="card">
                     <p class="card-title">Innenbeleuchtung</p>
-                    <p class="state">Farbe: <span id="color1RGBValue"></span></p>
+                    <p class="state">Farbe: <span id="0lRgb0_value"></span></p>
                     <p class="switch">
-                        <input type="color" onchange="updateColorRGB(this)" id="color1RGB" value="0">
+                        <input type="color" onchange="setValue(this)" id="0lRgb0" value="0">
                     </p>
-                    <p class="state">Weiß: <span id="color1WhiteValue"></span> %</p>
+                    <p class="state">Weiß: <span id="0lWhite0_value"></span> %</p>
                     <p class="switch">
-                        <input type="range" onchange="updateColorWhite(this)" id="color1White" min="0" max="100"
-                            step="1" value="0" class="slider">
+                        <input type="range" onchange="setValue(this)" id="0lWhite0" min="0" max="100" step="1" value="0"
+                            class="slider">
                     </p>
                 </div>
                 <div class="card">
                     <p class="card-title">Jesuskind</p>
-                    <p class="state">Farbe: <span id="color2RGBValue"></span></p>
+                    <p class="state">Farbe: <span id="0lRgb1_value"></span></p>
                     <p class="switch">
-                        <input type="color" onchange="updateColorRGB(this)" id="color2RGB" value="0">
+                        <input type="color" onchange="setValue(this)" id="0lRgb1" value="0">
                     </p>
-                    <p class="state">Weiß: <span id="color2WhiteValue"></span> %</p>
+                    <p class="state">Weiß: <span id="0lWhite1_value"></span> %</p>
                     <p class="switch">
-                        <input type="range" onchange="updateColorWhite(this)" id="color2White" min="0" max="100"
-                            step="1" value="0" class="slider">
+                        <input type="range" onchange="setValue(this)" id="0lWhite1" min="0" max="100" step="1" value="0"
+                            class="slider">
                     </p>
                 </div>
                 <div class="card">
                     <p class="card-title">Discokugel</p>
-                    <p class="state">Farbe: <span id="color3RGBValue"></span></p>
+                    <p class="state">Farbe: <span id="0lRgb2_value"></span></p>
                     <p class="switch">
-                        <input type="color" onchange="updateColorRGB(this)" id="color3RGB" value="0">
+                        <input type="color" onchange="setValue(this)" id="0lRgb2" value="0">
                     </p>
-                    <p class="state">Weiß: <span id="color3WhiteValue"></span> %</p>
+                    <p class="state">Weiß: <span id="0lWhite2_value"></span> %</p>
                     <p class="switch">
-                        <input type="range" onchange="updateColorWhite(this)" id="color3White" min="0" max="100"
-                            step="1" value="0" class="slider">
+                        <input type="range" onchange="setValue(this)" id="0lWhite2" min="0" max="100" step="1" value="0"
+                            class="slider">
                     </p>
-                    <p class="state">Geschwindigkeit: <span id="stepper1SpeedValue"></span> U/min</p>
+                    <p class="state">Geschwindigkeit: <span id="0mSpeed0_value"></span> U/min</p>
                     <p class="switch">
-                        <input type="range" onchange="updateStepperSpeed(this)" id="stepper1Speed" min="0" max="10"
-                            step="1" value="0" class="slider">
+                        <input type="range" onchange="setValue(this)" id="0mSpeed0" min="0" max="10" step="1" value="0"
+                            class="slider">
                     </p>
                 </div>
                 <div class="card">
                     <p class="card-title">Klohaus</p>
-                    <p class="state">Farbe: <span id="color4RGBValue"></span></p>
+                    <p class="state">Farbe: <span id="0lRgb3_value"></span></p>
                     <p class="switch">
-                        <input type="color" onchange="updateColorRGB(this)" id="color4RGB" value="0">
+                        <input type="color" onchange="setValue(this)" id="0lRgb3" value="0">
                     </p>
-                    <p class="state">Weiß: <span id="color4WhiteValue"></span> %</p>
+                    <p class="state">Weiß: <span id="0lWhite3_value"></span> %</p>
                     <p class="switch">
-                        <input type="range" onchange="updateColorWhite(this)" id="color4White" min="0" max="100"
-                            step="1" value="0" class="slider">
+                        <input type="range" onchange="setValue(this)" id="0lWhite3" min="0" max="100" step="1" value="0"
+                            class="slider">
                     </p>
                 </div>
                 <div class="card">
@@ -92,62 +92,34 @@
                 </div>
                 <div class="card">
                     <p class="card-title">Sound</p>
-                    <p class="state">Quelle: <span id="sound1SourceValue"></span></p>
-                    <select name="cars" id="cars">
+                    <p class="state">Quelle: <span id="0sSource0_value"></span></p>
+                    <select id="0sSource0">
                         <option value="int:christmas">Weihnachten</option>
                         <option
                             value="http:http://stream.antennethueringen.de/live/aac-64/stream.antennethueringen.de/">
                             Antenne Thüringen</option>
                         <option value="http:https://stream.antenne.de/antenne/stream/mp3">Antenne Bayern</option>
                     </select>
-                    <p class="state">Lautstärke: <span id="sound1VolumeValue"></span>/21</p>
+                    <p class="state">Lautstärke: <span id="0sVolume0_value"></span>/21</p>
                     <p class="switch">
-                        <input type="range" onchange="updateVolume(this)" id="sound1Volume" min="0" max="21" step="1"
-                            value="5" class="slider">
+                        <input type="range" onchange="setValue(this)" id="0sVolume0" min="0" max="21" step="1" value="5"
+                            class="slider">
                     </p>
-                    <p class="state">Status: <span id="sound1SourceValue"></span></p>
+                    <p class="state">Status: <span id="0sState0_value"></span></p>
                     <p class="switch">
-                        <input type="button" onclick="playSound(this)" id="sound1Start" value="Abspielen">
-                        <input type="button" onclick="playSound(this)" id="sound1Stop" value="Stoppen">
+                        <input type="button" onclick="setValue(this)" id="0sState0=1" value="Abspielen">
+                        <input type="button" onclick="setValue(this)" id="0sState0=0" value="Stoppen">
                     </p>
                 </div>
-
-
-
-
                 <div class="card">
-                    <p class="card-title"> Fader 2</p>
+                    <p class="card-title">Speichern</p>
+                    <p class="state">Für später speichern</p>
                     <p class="switch">
-                        <input type="range" onchange="updateSliderPWM(this)" id="slider2" min="0" max="100" step="1"
-                            value="0" class="slider">
+                        <input type="button" onclick="setValue(this)" id="0pSave0" value="Speichern">
                     </p>
-                    <p class="state">Brightness: <span id="sliderValue2"></span> &percnt;</p>
-                </div>
-                <div class="card">
-                    <p class="card-title"> Fader 3</p>
-                    <p class="switch">
-                        <input type="range" onchange="updateSliderPWM(this)" id="slider3" min="0" max="100" step="1"
-                            value="0" class="slider">
-                    </p>
-                    <p class="state">Brightness: <span id="sliderValue3"></span></p>
-                </div>
-                <div class="card">
-                    <p class="card-title"> Hauptfarbe</p>
-                    <p class="switch">
-                        <input type="color" onchange="updateColor(this)" id="color1" value="0">
-                    </p>
-                    <p class="state">Aktuell: <span id="color1value"></span> &percnt;</p>
-                </div>
-                <div class="card">
-                    <p class="card-title"> Sound</p>
-                    <p class="switch">
-                        <input type="button" onclick="playSound(this)" id="sound1play" value="Play">
-                    </p>
-                    <p class="switch">
-                        <input type="range" onchange="updateVolume(this)" id="sound1volume" min="0" max="21" step="1"
-                            value="5" class="slider">
-                    </p>
-                    <p class="state">Volume: <span id="sound1volumevalue"></span></p>
+                    <!--<p class="switch">
+                        <input type="button" onclick="setValue(this)" id="1p1reset" value="Zurücksetzen">
+                    </p>-->
                 </div>
             </div>
         </div>

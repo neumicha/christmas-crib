@@ -2,6 +2,9 @@
 ESP32 Christmas Crib with support for:
 - Neopixel/WS2812/SK6812 LEDs
 - Audio (e.g. mp3) playback
+- Stepper motors
+
+Code is not optimized for performance but instead for easy changing etc.
 
 ## TODOs
 - Save and restore settings
@@ -10,6 +13,7 @@ ESP32 Christmas Crib with support for:
 - Enable WebSerial: https://randomnerdtutorials.com/esp32-webserial-library/
 - Fix instability of OTA programming
 - Finalize everything (make it production ready)
+- Optimize performance by replacing String class by standard C functions etc. 
 
 ## How-To
 
@@ -34,6 +38,14 @@ The web interface can be accessed via ip-address or via [http://christmas-crib/]
 Add the following lines to your `dev` in `platformio.ini`:
 - `upload_port = christmas-crib`
 - `upload_protocol = espota`
+
+## Nice2Know
+### Naming convention of actuators etc.
+- l: Light (rgb, white)
+- m: Motor (speed)
+- a: Animation (type, param)
+- s: Sound (source, state, volume)
+- p: Preset (select, save, reset)
 
 ## Known issues
 - We are using fixed version of ASyncTCP (`esphome/AsyncTCP-esphome@2.0.1`) due to dependency issues with the webserver (see [here](https://github.com/esphome/issues/issues/5258))

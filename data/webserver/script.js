@@ -30,7 +30,44 @@ function onClose(event) {
   setTimeout(initWebSocket, 2000);
 }
 
-function updateSliderPWM(element) {
+// NEW ONES
+
+// Returns preset, key, value
+function extractPresetAndValue(element) {
+  return [
+    parseInt(element.id.substr(0, 1)),
+    element.id.substr(1),
+    element.value,
+  ];
+}
+
+function buildWsCommand(preset, key, value) {
+  return "p=" + preset.toString() + "&" + key + "=" + value.toString();
+}
+
+function sendWsCommand(preset, key, value) {
+  websocket.send(buildWsCommand(preset, key, value));
+}
+
+function updateUiValue(preset, key, value) {
+  const element = document.getElementById(preset + key + "_value");
+  if (element) {
+    document.getElementById(preset + key + "_value").innerHTML = value;
+  }
+}
+
+function setValue(element) {
+  const [preset, key, value] = extractPresetAndValue(element);
+  console.log(
+    "Set value: " + preset.toString() + "|" + key + "|" + value.toString()
+  );
+  updateUiValue(preset, key, value);
+  sendWsCommand(preset, key, value);
+}
+
+// OLD ONES
+
+/* function updateSliderPWM(element) {
   var sliderNumber = element.id.charAt(element.id.length - 1);
   var sliderValue = document.getElementById(element.id).value;
   document.getElementById("sliderValue" + sliderNumber).innerHTML = sliderValue;
@@ -55,9 +92,10 @@ function updateVolume(element) {
 function updateStepperSpeed(element) {
   document.getElementById(element.id + "value").innerHTML = element.value;
   websocket.send(element.id + "=" + element.value.toString());
-}
+} */
 
 function onMessage(event) {
+  // TODO
   console.log(event.data);
   var myObj = JSON.parse(event.data);
   var keys = Object.keys(myObj);
@@ -70,7 +108,7 @@ function onMessage(event) {
 }
 
 // Tabs
-function openTab(evt, tabName) {
+function selectPreset(evt, tabName) {
   var i, tabcontent, tablinks;
   tabcontent = document.getElementsByClassName("tabcontent");
   for (i = 0; i < tabcontent.length; i++) {
@@ -84,5 +122,5 @@ function openTab(evt, tabName) {
   evt.currentTarget.className += " active";
 }
 
-// Get the element with id="defaultOpen" and click on it
-document.getElementById("defaultTab").click();
+// Get the element with id="1select" and click on it
+document.getElementById("1select").click();
