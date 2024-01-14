@@ -65,6 +65,19 @@ function setValue(element) {
   sendWsCommand(preset, key, value);
 }
 
+function onMessage(event) {
+  // TODO
+  console.log(event.data);
+  var myObj = JSON.parse(event.data);
+  var keys = Object.keys(myObj);
+
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    document.getElementById(key).innerHTML = myObj[key];
+    document.getElementById("slider" + (i + 1).toString()).value = myObj[key];
+  }
+}
+
 // OLD ONES
 
 /* function updateSliderPWM(element) {
@@ -93,19 +106,6 @@ function updateStepperSpeed(element) {
   document.getElementById(element.id + "value").innerHTML = element.value;
   websocket.send(element.id + "=" + element.value.toString());
 } */
-
-function onMessage(event) {
-  // TODO
-  console.log(event.data);
-  var myObj = JSON.parse(event.data);
-  var keys = Object.keys(myObj);
-
-  for (var i = 0; i < keys.length; i++) {
-    var key = keys[i];
-    document.getElementById(key).innerHTML = myObj[key];
-    document.getElementById("slider" + (i + 1).toString()).value = myObj[key];
-  }
-}
 
 // Tabs
 function selectPreset(evt, tabName) {

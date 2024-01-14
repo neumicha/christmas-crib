@@ -10,13 +10,14 @@
 
 #include <Credentials.h>
 #include "SPIFFS.h"
-#include <Arduino_JSON.h>
+// #include <Arduino_JSON.h>
 #include <string>
 #include "Audio.h"
 #include <AccelStepper.h>
 
 #include <Preferences.h>
 #include "CCSettings.h"
+#include <ArduinoJson.h>
 
 // WiFi network credentials
 const char *ssid = WIFI_SSID;
@@ -36,8 +37,8 @@ int dutyCycle2;
 int dutyCycle3;
 const int resolution = 8;
 // Json Variable to Hold Slider Values
-JSONVar sliderValues;
-CCSettings ccSettings;
+// JSONVar sliderValues;
+CCSettings ccSettings[2];
 
 // Blink LED
 const int led = 2;                // ESP32 Pin to which onboard LED is connected
@@ -75,11 +76,12 @@ Preferences preferences;
 // Get Slider Values
 String getSliderValues()
 {
-  sliderValues["sliderValue1"] = String(sliderValue1);
-  sliderValues["sliderValue2"] = String(sliderValue2);
-  sliderValues["sliderValue3"] = String(sliderValue3);
-  String jsonString = JSON.stringify(sliderValues);
-  return jsonString;
+  // sliderValues["sliderValue1"] = String(sliderValue1);
+  // sliderValues["sliderValue2"] = String(sliderValue2);
+  // sliderValues["sliderValue3"] = String(sliderValue3);
+  // String jsonString = JSON.stringify(sliderValues);
+  // return jsonString;
+  return "";
 }
 
 // Initialize SPIFFS
@@ -99,6 +101,10 @@ void initFS()
 void notifyClients(String sliderValues)
 {
   ws.textAll(sliderValues);
+}
+
+void updateMotorSpeed(int nr)
+{
 }
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
@@ -130,7 +136,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
       {
         Serial.print("Handle Light(RGB) with Index ");
         Serial.println(keyIndex);
-        ccSettings.lRgb[keyIndex] = value.substring(1);
+        // ccSettings[preset].lRgb[keyIndex] = value.substring(1);
         // TODO Implement this
       }
       // TODO Implement other cases (white, motors, ...) and update those things after change
@@ -240,10 +246,13 @@ void setup()
   // TODO Really load them
   // And close Perferences afterwards...
   Serial.println("Settings:");
-  Serial.println(ccSettings.toString());
+  Serial.println("0:");
+  Serial.println(ccSettings[0].toString());
+  Serial.println("1:");
+  Serial.println(ccSettings[1].toString());
 
-  ccSettings.lRgb[0] = "abc";
-  ccSettings.lWhite[0] = 50;
+  // ccSettings[0].lRgb[0] = "abc";
+  // ccSettings[1].lWhite[0] = 50;
 
   initFS();
 
@@ -336,6 +345,16 @@ void setup()
 
   // Blink LED
   pinMode(led, OUTPUT);
+
+  // Test of JSON
+  JsonDocument doc;
+  doc["ex1"] = "abcdef";
+  doc["ex2"] = 123;
+  JsonArray data = doc["ex3"].to<JsonArray>();
+  data.add("abc");
+  data.add(456);
+  Serial.println("");
+  serializeJsonPretty(doc, Serial);
 }
 
 void getRGB(const char *text, byte &r, byte &g, byte &b)
@@ -395,8 +414,10 @@ void loop()
 
     Serial.print("Preference: ");
     Serial.println(preferences.getString("source1"));
-    Serial.println("Settings:");
-    Serial.println(ccSettings.toString());
+    Serial.println("Settings 0:");
+    serializeJsonPretty(ccSettings[0].toJSON(), Serial);
+    Serial.println("Settings 1:");
+    serializeJsonPretty(ccSettings[1].toJSON(), Serial);
   }
 
   // Webserver
