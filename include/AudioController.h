@@ -10,6 +10,10 @@ private:
 
 public:
     void setup(int i2sBCLK, int i2sLRC, int i2sDOUT, int volume);
+    void start();
+    void stop();
+    bool pauseResume();
+    uint32_t stopSong();
     void setVolume(int volume);
     bool connecttoFS(fs::SPIFFSFS spiffs, String file);
     bool connecttohost(String host);

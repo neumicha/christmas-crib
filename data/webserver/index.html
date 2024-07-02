@@ -93,12 +93,11 @@
                 <div class="card">
                     <p class="card-title">Sound</p>
                     <p class="state">Quelle: <span id="0sSource0_value"></span></p>
-                    <select id="0sSource0">
-                        <option value="int:christmas">Weihnachten</option>
-                        <option
-                            value="http:http://stream.antennethueringen.de/live/aac-64/stream.antennethueringen.de/">
+                    <select id="0sSource0" onchange="setValue(this)">
+                        <option value="/audio/christmas.mp3">Weihnachten</option>
+                        <option value="http://stream.antennethueringen.de/live/aac-64/stream.antennethueringen.de/">
                             Antenne Thüringen</option>
-                        <option value="http:https://stream.antenne.de/antenne/stream/mp3">Antenne Bayern</option>
+                        <option value="https://stream.antenne.de/antenne/stream/mp3">Antenne Bayern</option>
                     </select>
                     <p class="state">Lautstärke: <span id="0sVolume0_value"></span>/21</p>
                     <p class="switch">
@@ -109,6 +108,8 @@
                     <p class="switch">
                         <input type="button" onclick="setValue(this)" id="0sState0=1" value="Abspielen">
                         <input type="button" onclick="setValue(this)" id="0sState0=0" value="Stoppen">
+                        <input type="button" onclick="setValue(this)" id="0Toggle" value="Toggle">
+                        <input type="button" onclick="setValue(this)" id="0Stopper" value="Stopper">
                     </p>
                 </div>
                 <div class="card">

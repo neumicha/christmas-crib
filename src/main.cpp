@@ -71,7 +71,7 @@ constexpr int STEPPER1_IN2 = 26;
 constexpr int STEPPER1_IN3 = 27;
 constexpr int STEPPER1_IN4 = 14;
 constexpr int STEPPER_MAX = 10;
-constexpr int STEPPER_SPS = 2048 / 60; // steps per second for one revolution
+#define STEPPER_SPS ((2048 * 16) / 60) // steps per second for one revolution
 AccelStepper motors[1] = {AccelStepper(AccelStepper::FULL4WIRE, STEPPER1_IN1, STEPPER1_IN3, STEPPER1_IN2, STEPPER1_IN4)};
 
 Preferences preferences;
@@ -130,7 +130,34 @@ void updateMotors(CCSettings *settings)
 {
   for (int i = 0; i < 1; i++) // TODO Set boundary to define
   {
-    motors[i].setSpeed(STEPPER_SPS * min(settings->intSettings["mSpeed"][i], STEPPER_MAX));
+    motors[i].setSpeed(STEPPER_SPS * min(abs(settings->intSettings["mSpeed"][i]), STEPPER_MAX));
+    Serial.print("Setting motor speed to ");
+    Serial.println(STEPPER_SPS * min(abs(settings->intSettings["mSpeed"][i]), STEPPER_MAX));
+  }
+}
+
+void updateSound(CCSettings *settings)
+{
+  for (int i = 0; i < 1; i++) // TODO Set boundary to define
+  // TODO Put audioController into array
+  {
+    if (settings->stringSettings["sSource"][i] != "" && settings->boolSettings["sState"][i] && settings->intSettings["sVolume"][i] > 0)
+    {
+      if (settings->stringSettings["sSource"][i].indexOf("http") == 0)
+      {
+        audioController.connecttohost(settings->stringSettings["sSource"][i]);
+      }
+      else
+      {
+        audioController.connecttoFS(SPIFFS, settings->stringSettings["sSource"][i]);
+      }
+      audioController.setVolume(settings->intSettings["sVolume"][i]);
+    }
+    else
+    {
+      audioController.setVolume(0);
+      audioController.stopSong();
+    }
   }
 }
 
@@ -176,7 +203,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
       }
       if (std::find(std::begin(bools), std::end(bools), key) != std::end(bools))
       {
-        ccSettings[0].boolSettings[key][keyIndex] = (value == "1");
+        ccSettings[0].boolSettings[key][keyIndex] = (value.indexOf("1") == 0); // Map everything starting with "1" to true
       }
 
       if (key.indexOf("l") == 0)
@@ -186,6 +213,10 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
       else if (key.indexOf("m") == 0)
       { // Motors
         updateMotors(&ccSettings[0]);
+      }
+      else if (key.indexOf("s") == 0)
+      { // Motors
+        updateSound(&ccSettings[0]);
       }
       // TODO Implement other cases (white, motors, ...) and update those things after change
     }
@@ -212,93 +243,6 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
     //   Serial.println(dutyCycle3);
     //   Serial.print(getSliderValues());
     //   notifyClients(getSliderValues());
-    // }
-    // Handle int settings
-    // String ints[] = {"lWhite", "mSpeed", "aType", "aParam", "sVolume"};
-    // for (String s : ints)
-    // {
-    //   if (message.indexOf(s) >= 0)
-    //   {
-    //     int nr = message.substring(2 + s.length(), 3 + s.length()).toInt();
-    //     String value = message.substring(3 + s.length(), message.length());
-    //     ccSettings[0].intSettings[s][nr] = value.toInt();
-    //   }
-    // }
-    // // Handle string settings
-    // String strings[] = {"lRgb", "sSource"};
-    // for (String s : strings)
-    // {
-    //   if (message.indexOf(s) >= 0)
-    //   {
-    //     // int nr = message.substring(2 + s.length(), 3 + s.length()).toInt();
-    //     // String value = message.substring(3 + s.length(), message.length());
-    //     // Serial.print("String setting: ");
-    //     // Serial.print(s);
-    //     // Serial.print("[");
-    //     // Serial.print(nr);
-    //     // Serial.print("]=");
-    //     // Serial.println(value);
-    //     // ccSettings[0].stringSettings[s][nr] = value;
-    //   }
-    // }
-    // // Handle bool settings
-    // String bools[] = {"sState"};
-    // for (String s : bools)
-    // {
-    //   if (message.indexOf(s) >= 0)
-    //   {
-    //     int nr = message.substring(2 + s.length(), 3 + s.length()).toInt();
-    //     String value = message.substring(3 + s.length(), 4 + s.length());
-    //     ccSettings[0].boolSettings[s][nr] = (value == "1");
-    //   }
-    // }
-    // else if (message.indexOf("lRgb") >= 0)
-    // {
-    //   int light = message.substring(2 + 4, 2 + 4 + 1).toInt();
-    //   String value = message.substring(2 + 5, 2 + 5 + 1);
-    //   ccSettings[0].stringSettings["lRgb"][light] = value;
-    //   // notifyClients(getSliderValues()); // TODO Fix
-    // }
-    // else if (message.indexOf("lWhite")) >= 0)
-    // {
-    //   int light = message.substring(2 + 4, 2 + 4 + 1).toInt();
-    //   String value = message.substring(2 + 5, 2 + 5 + 1);
-    //   ccSettings[0].stringSettings["lWhite"][light] = value;
-    //   // notifyClients(getSliderValues()); // TODO Fix
-    // }
-    // if (message.indexOf("sound1play") >= 0) // TODO Prettify this
-    // {
-    //   Serial.println("Play sound1");
-    //   // Open music file
-    //   audioController.connecttohost("http://stream.antennethueringen.de/live/aac-64/stream.antennethueringen.de/");
-    //   // audioController.connecttoFS(SPIFFS, "/audio/test.mp3");
-    // }
-    // // sound1volume
-    // if (message.indexOf("sVolume") >= 0)
-    // {
-    //   Serial.print("Set volume of sound1 to ");
-    //   Serial.println(message.substring(8).toInt());
-    //   audioController.setVolume(message.substring(13).toInt());
-    //   ccSettings[0].intSettings["sVolume"][0] = message.substring(13).toInt();
-    // }
-    // // motor speed (support only 1 motor atm)
-    // if (message.indexOf("mSpeed") >= 0)
-    // {
-    //   Serial.println("Set motor speed");
-    //   int motor = message.substring(2 + 6, 2 + 6 + 1).toInt();
-    //   int value = message.substring(2 + 8, 2 + 6 + 1).toInt();
-    //   if (abs(value) <= 10)
-    //   {
-    //     Serial.println("Values:");
-    //     Serial.print(motor);
-    //     Serial.print(" : ");
-    //     Serial.println(value);
-    //     stepper1.setSpeed(stepper1sps * value);
-    //   }
-    //   else
-    //   {
-    //     Serial.println("Speed OOB");
-    //   }
     // }
 
     // Save preferences
@@ -460,13 +404,11 @@ void setup()
   audioController.setup(I2S_BCLK, I2S_LRC, I2S_DOUT, audioVolume);
   audioController.connecttohost("http://stream.antennethueringen.de/live/aac-64/stream.antennethueringen.de/");
 
-  // Real code here
-  // int result = myFunction(2, 3);
-
   // Motors
-  for (AccelStepper motor : motors)
+  for (int i = 0; i < 1; i++)
   {
-    motor.setMaxSpeed(STEPPER_SPS * STEPPER_MAX);
+    motors[i].setMaxSpeed(STEPPER_SPS * STEPPER_MAX);
+    motors[i].setSpeed(0);
   }
 
   // Preferences
@@ -495,50 +437,16 @@ void loop()
   // loop to blink without delay
   unsigned long currentMillis = millis();
   if (currentMillis - previousMillis >= interval)
-  {
-    Serial.println("Toggle LED");
-    Serial.println(currentMillis);
-    // save the last time you blinked the LED
+  { // save the last time you blinked the LED
     previousMillis = currentMillis;
     // if the LED is off turn it on and vice-versa:
     ledState = not(ledState);
     // set the LED with the ledState of the variable:
     digitalWrite(led, ledState);
 
-    // Neopixel
-    // NeoPixel.clear();
-    // NeoPixel.setPixelColor(0, NeoPixel.Color(127, 0, 0, 0));
-    // Serial.println("Color1Val: " + color1value);
-    // getRGB(color1value.c_str(), r, g, b);
-    // String red = color1value.substring(0, 2);
-    // String green = color1value.substring(2, 4);
-    // String blue = color1value.substring(4, 6);
-    // NeoPixel.setPixelColor(1, NeoPixel.Color(r, g, b, 0));
-    // NeoPixel.setPixelColor(2, NeoPixel.Color(0, 0, 0, 0));
-    // NeoPixel.setPixelColor(3, NeoPixel.Color(0, 0, 0, 0));
-    // NeoPixel.setBrightness(dutyCycle1);
-    // NeoPixel.show();
-    // Serial.print("red: ");
-    // Serial.println(r);
-    // Serial.print("green: ");
-    // Serial.println(g);
-    // Serial.print("blue: ");
-    // Serial.println(b);
-    // Serial.println("red: " + red);
-    // Serial.println("green: " + green);
-    // Serial.println("blue: " + blue);
-    // uint8_t red2 = stoi(red.c_str(), red.c_str()+2, 16);
-    // uint8_t green2 = strtol(green.c_str(), &blue.c_str(), 16);
-    // uint8_t blue2 = strtol(blue.c_str(), NULL, 16);
-    // Serial.println("red2: " + red2);
-    // Serial.println("green2: " + green2);
-
     Serial.print("Preference: ");
-    // Serial.println(preferences.getString("source1"));
     Serial.println("Settings 0:");
     serializeJsonPretty(ccSettings[0].toJSON(), Serial);
-    // Serial.println("Settings 1:");
-    // serializeJsonPretty(ccSettings[1].toJSON(), Serial);
   }
 
   // Webserver
@@ -548,9 +456,9 @@ void loop()
   audioController.loop();
 
   // Stepper
-  for (AccelStepper motor : motors)
+  for (int i = 0; i < 1; i++)
   {
-    motor.runSpeed();
+    motors[i].runSpeed();
   }
 }
 

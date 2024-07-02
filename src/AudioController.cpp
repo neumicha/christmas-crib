@@ -6,6 +6,28 @@ void AudioController::setup(int i2sBCLK, int i2sLRC, int i2sDOUT, int volume)
     audio.setPinout(i2sBCLK, i2sLRC, i2sDOUT);
     this->setVolume(volume);
 }
+void AudioController::start()
+{
+    if (!audio.isRunning())
+    {
+        audio.pauseResume();
+    }
+}
+void AudioController::stop()
+{
+    if (audio.isRunning())
+    {
+        audio.pauseResume();
+    }
+}
+bool AudioController::pauseResume()
+{
+    return audio.pauseResume();
+}
+uint32_t AudioController::stopSong()
+{
+    return audio.stopSong();
+}
 void AudioController::setVolume(int volume)
 {
     audio.setVolume(volume);
