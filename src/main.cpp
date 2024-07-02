@@ -12,16 +12,20 @@
 #include "SPIFFS.h"
 // #include <Arduino_JSON.h>
 #include <string>
-#include "Audio.h"
 #include <AccelStepper.h>
 
 #include <Preferences.h>
 #include "CCSettings.h"
 #include <ArduinoJson.h>
 
+#include "AudioController.h"
+
+// To erase nvs partition
+#include <nvs_flash.h>
+
 // WiFi network credentials
-const char *ssid = WIFI_SSID;
-const char *password = WIFI_PW;
+constexpr char *ssid = WIFI_SSID;
+constexpr char *password = WIFI_PW;
 
 // Webserver
 AsyncWebServer server(80);
@@ -41,35 +45,34 @@ const int resolution = 8;
 CCSettings ccSettings[2];
 
 // Blink LED
-const int led = 2;                // ESP32 Pin to which onboard LED is connected
+constexpr int led = 2;            // ESP32 Pin to which onboard LED is connected
 unsigned long previousMillis = 0; // will store last time LED was updated
-const long interval = 1000;       // interval at which to blink (milliseconds)
+constexpr long interval = 10000;  // interval at which to blink (milliseconds)
 int ledState = LOW;               // ledState used to set the LED
 
 // Neopixels
-#define PIN_NEO_PIXEL 16 // The ESP32 pin GPIO16 connected to NeoPixel
-#define NUM_PIXELS 4     // The number of LEDs (pixels) on NeoPixel LED strip
+constexpr int PIN_NEO_PIXEL = 16; // The ESP32 pin GPIO16 connected to NeoPixel
+constexpr int NUM_PIXELS = 5;     // The number of LEDs (pixels) on NeoPixel LED strip
 Adafruit_NeoPixel NeoPixel(NUM_PIXELS, PIN_NEO_PIXEL, NEO_GRBW + NEO_KHZ800);
 
 // Audio
 // I2S Connection
-#define I2S_DOUT 18
-#define I2S_BCLK 19
-#define I2S_LRC 21
-// Audio object
-Audio audio;
+constexpr int I2S_DOUT = 18;
+constexpr int I2S_BCLK = 19;
+constexpr int I2S_LRC = 21;
 // Volume
 int audioVolume = 5;
+// Audio object
+AudioController audioController;
 
 // Stepper Motor Driver ULN2003
-#define STEPPER1_IN1 25
-#define STEPPER1_IN2 26
-#define STEPPER1_IN3 27
-#define STEPPER1_IN4 14
-const int stepper1max = 10;
-const int stepper1sps = 2048 / 60; // steps per second for one revolution
-int stepper1speed;
-AccelStepper stepper1(AccelStepper::FULL4WIRE, STEPPER1_IN1, STEPPER1_IN3, STEPPER1_IN2, STEPPER1_IN4);
+constexpr int STEPPER1_IN1 = 25;
+constexpr int STEPPER1_IN2 = 26;
+constexpr int STEPPER1_IN3 = 27;
+constexpr int STEPPER1_IN4 = 14;
+constexpr int STEPPER_MAX = 10;
+constexpr int STEPPER_SPS = 2048 / 60; // steps per second for one revolution
+AccelStepper motors[1] = {AccelStepper(AccelStepper::FULL4WIRE, STEPPER1_IN1, STEPPER1_IN3, STEPPER1_IN2, STEPPER1_IN4)};
 
 Preferences preferences;
 
@@ -103,8 +106,32 @@ void notifyClients(String sliderValues)
   ws.textAll(sliderValues);
 }
 
-void updateMotorSpeed(int nr)
+void getRGB(const char *text, byte &r, byte &g, byte &b)
 {
+  long l = strtol(text + 1, NULL, 16);
+  r = l >> 16;
+  g = l >> 8;
+  b = l;
+}
+
+void updateLights(CCSettings *settings)
+{
+  NeoPixel.clear();
+  for (int i = 0; i < 4; i++) // TODO Set boundary to define
+  {
+    getRGB(settings->stringSettings["lRgb"][i].c_str(), r, g, b);
+    NeoPixel.setPixelColor(i, NeoPixel.Color(r, g, b, settings->intSettings["lWhite"][i]));
+  }
+  NeoPixel.setPixelColor(4, NeoPixel.Color(0, 0, 0, 0));
+  NeoPixel.show();
+}
+
+void updateMotors(CCSettings *settings)
+{
+  for (int i = 0; i < 1; i++) // TODO Set boundary to define
+  {
+    motors[i].setSpeed(STEPPER_SPS * min(settings->intSettings["mSpeed"][i], STEPPER_MAX));
+  }
 }
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
@@ -113,7 +140,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
   if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)
   {
     data[len] = 0;
-    message = (char *)data;
+    message = reinterpret_cast<char *>(data);
     Serial.print("Handling websocket message");
     const char ind_preset = message.indexOf("p=");
     if (ind_preset == 0)
@@ -130,84 +157,183 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
       Serial.println(preset);
       Serial.print("Key ");
       Serial.println(key);
+      Serial.print("KeyIndex ");
+      Serial.println(keyIndex);
       Serial.print("Value ");
       Serial.println(value);
-      if (key == "lRgb")
+      Serial.print("Full message ");
+      Serial.println(message);
+      String ints[] = {"lWhite", "mSpeed", "aType", "aParam", "sVolume"};
+      String strings[] = {"lRgb", "sSource"};
+      String bools[] = {"sState"};
+      if (std::find(std::begin(ints), std::end(ints), key) != std::end(ints))
       {
-        Serial.print("Handle Light(RGB) with Index ");
-        Serial.println(keyIndex);
-        // ccSettings[preset].lRgb[keyIndex] = value.substring(1);
-        // TODO Implement this
+        ccSettings[0].intSettings[key][keyIndex] = value.toInt();
+      }
+      if (std::find(std::begin(strings), std::end(strings), key) != std::end(strings))
+      {
+        ccSettings[0].stringSettings[key][keyIndex] = value;
+      }
+      if (std::find(std::begin(bools), std::end(bools), key) != std::end(bools))
+      {
+        ccSettings[0].boolSettings[key][keyIndex] = (value == "1");
+      }
+
+      if (key.indexOf("l") == 0)
+      { // Lights
+        updateLights(&ccSettings[0]);
       }
       // TODO Implement other cases (white, motors, ...) and update those things after change
     }
-    if (message.indexOf("1s") >= 0)
-    {
-      sliderValue1 = message.substring(2);
-      dutyCycle1 = map(sliderValue1.toInt(), 0, 100, 0, 255);
-      Serial.println(dutyCycle1);
-      Serial.print(getSliderValues());
-      notifyClients(getSliderValues());
-    }
-    if (message.indexOf("2s") >= 0)
-    {
-      sliderValue2 = message.substring(2);
-      dutyCycle2 = map(sliderValue2.toInt(), 0, 100, 0, 255);
-      Serial.println(dutyCycle2);
-      Serial.print(getSliderValues());
-      notifyClients(getSliderValues());
-    }
-    if (message.indexOf("3s") >= 0)
-    {
-      sliderValue3 = message.substring(2);
-      dutyCycle3 = map(sliderValue3.toInt(), 0, 100, 0, 255);
-      Serial.println(dutyCycle3);
-      Serial.print(getSliderValues());
-      notifyClients(getSliderValues());
-    }
-    if (message.indexOf("color1") >= 0) // TODO Make this prettier
-    {
-      color1value = message.substring(8); // TODO Make this prettier (length of color1 + 2 for =#)
-      Serial.println("Color1 value set: " + color1value);
-      notifyClients(getSliderValues()); // TODO Fix this
-    }
-    if (message.indexOf("sound1play") >= 0) // TODO Prettify this
-    {
-      Serial.println("Play sound1");
-      // Open music file
-      // audio.connecttohost("http://stream.antennethueringen.de/live/aac-64/stream.antennethueringen.de/");
-      audio.connecttoFS(SPIFFS, "/audio/test.mp3");
-    }
-    // sound1volume
-    if (message.indexOf("sound1volume") >= 0)
-    {
-      Serial.println("Set volume of sound1");
-      audio.setVolume(message.substring(13).toInt());
-    }
-    // stepper1speed
-    if (message.indexOf("stepper1") >= 0)
-    {
-      Serial.print("Setting speed of stepper1 to: ");
-      Serial.println(message.substring(9).toInt());
-      stepper1speed = message.substring(9).toInt();
-      stepper1.setSpeed(stepper1sps * stepper1speed);
-      // TODO Check if speed is over max!
-    }
-    /*
+    // if (message.indexOf("1s") >= 0)
+    // {
+    //   sliderValue1 = message.substring(2);
+    //   dutyCycle1 = map(sliderValue1.toInt(), 0, 100, 0, 255);
+    //   Serial.println(dutyCycle1);
+    //   Serial.print(getSliderValues());
+    //   notifyClients(getSliderValues());
+    // }
+    // if (message.indexOf("2s") >= 0)
+    // {
+    //   sliderValue2 = message.substring(2);
+    //   dutyCycle2 = map(sliderValue2.toInt(), 0, 100, 0, 255);
+    //   Serial.println(dutyCycle2);
+    //   Serial.print(getSliderValues());
+    //   notifyClients(getSliderValues());
+    // }
+    // if (message.indexOf("3s") >= 0)
+    // {
+    //   sliderValue3 = message.substring(2);
+    //   dutyCycle3 = map(sliderValue3.toInt(), 0, 100, 0, 255);
+    //   Serial.println(dutyCycle3);
+    //   Serial.print(getSliderValues());
+    //   notifyClients(getSliderValues());
+    // }
+    // Handle int settings
+    // String ints[] = {"lWhite", "mSpeed", "aType", "aParam", "sVolume"};
+    // for (String s : ints)
+    // {
+    //   if (message.indexOf(s) >= 0)
+    //   {
+    //     int nr = message.substring(2 + s.length(), 3 + s.length()).toInt();
+    //     String value = message.substring(3 + s.length(), message.length());
+    //     ccSettings[0].intSettings[s][nr] = value.toInt();
+    //   }
+    // }
+    // // Handle string settings
+    // String strings[] = {"lRgb", "sSource"};
+    // for (String s : strings)
+    // {
+    //   if (message.indexOf(s) >= 0)
+    //   {
+    //     // int nr = message.substring(2 + s.length(), 3 + s.length()).toInt();
+    //     // String value = message.substring(3 + s.length(), message.length());
+    //     // Serial.print("String setting: ");
+    //     // Serial.print(s);
+    //     // Serial.print("[");
+    //     // Serial.print(nr);
+    //     // Serial.print("]=");
+    //     // Serial.println(value);
+    //     // ccSettings[0].stringSettings[s][nr] = value;
+    //   }
+    // }
+    // // Handle bool settings
+    // String bools[] = {"sState"};
+    // for (String s : bools)
+    // {
+    //   if (message.indexOf(s) >= 0)
+    //   {
+    //     int nr = message.substring(2 + s.length(), 3 + s.length()).toInt();
+    //     String value = message.substring(3 + s.length(), 4 + s.length());
+    //     ccSettings[0].boolSettings[s][nr] = (value == "1");
+    //   }
+    // }
+    // else if (message.indexOf("lRgb") >= 0)
+    // {
+    //   int light = message.substring(2 + 4, 2 + 4 + 1).toInt();
+    //   String value = message.substring(2 + 5, 2 + 5 + 1);
+    //   ccSettings[0].stringSettings["lRgb"][light] = value;
+    //   // notifyClients(getSliderValues()); // TODO Fix
+    // }
+    // else if (message.indexOf("lWhite")) >= 0)
+    // {
+    //   int light = message.substring(2 + 4, 2 + 4 + 1).toInt();
+    //   String value = message.substring(2 + 5, 2 + 5 + 1);
+    //   ccSettings[0].stringSettings["lWhite"][light] = value;
+    //   // notifyClients(getSliderValues()); // TODO Fix
+    // }
+    // if (message.indexOf("sound1play") >= 0) // TODO Prettify this
+    // {
+    //   Serial.println("Play sound1");
+    //   // Open music file
+    //   audioController.connecttohost("http://stream.antennethueringen.de/live/aac-64/stream.antennethueringen.de/");
+    //   // audioController.connecttoFS(SPIFFS, "/audio/test.mp3");
+    // }
+    // // sound1volume
+    // if (message.indexOf("sVolume") >= 0)
+    // {
+    //   Serial.print("Set volume of sound1 to ");
+    //   Serial.println(message.substring(8).toInt());
+    //   audioController.setVolume(message.substring(13).toInt());
+    //   ccSettings[0].intSettings["sVolume"][0] = message.substring(13).toInt();
+    // }
+    // // motor speed (support only 1 motor atm)
+    // if (message.indexOf("mSpeed") >= 0)
+    // {
+    //   Serial.println("Set motor speed");
+    //   int motor = message.substring(2 + 6, 2 + 6 + 1).toInt();
+    //   int value = message.substring(2 + 8, 2 + 6 + 1).toInt();
+    //   if (abs(value) <= 10)
+    //   {
+    //     Serial.println("Values:");
+    //     Serial.print(motor);
+    //     Serial.print(" : ");
+    //     Serial.println(value);
+    //     stepper1.setSpeed(stepper1sps * value);
+    //   }
+    //   else
+    //   {
+    //     Serial.println("Speed OOB");
+    //   }
+    // }
+
     // Save preferences
-    if (message.indexOf("save") >= 0)
+    if (message.indexOf("pSave") >= 0)
     {
       Serial.print("Saving...");
-      preferences.putString();
-      jsonString.
-      JSONVar
-    }*/
-    if (strcmp((char *)data, "getValues") == 0)
-    {
-      notifyClients(getSliderValues());
+      // preferences.putString(0, static_cast<char *>(ccSettings[0].toJSON()));
+      String saveString;
+      serializeJson(ccSettings[0].toJSON(), saveString);
+      preferences.putString("settings", saveString);
     }
+    else if (message.indexOf("pLoad") >= 0)
+    {
+      Serial.print("Loading...");
+      String loadString = preferences.getString("settings");
+      if (!loadString.isEmpty())
+      {
+        JsonDocument settings;
+        deserializeJson(settings, loadString);
+        Serial.println("Settings after loading:");
+        // serializeJsonPretty(settings, Serial);
+        // ccSettings[0].intSettings["sVolume"][0] = settings["sVolume"];
+      }
+    }
+
+    // ccSettings[0].intSettings["lRgb"][0] = settings["lRgb"];
+  }
+  else if (message.indexOf("pReset") >= 0)
+  {
+    Serial.print("Resetting...");
+    nvs_flash_erase(); // erase the NVS partition and...
+    nvs_flash_init();  // initialize the NVS partition.
+  }
+  if (strcmp(reinterpret_cast<char *>(data), "getValues") == 0)
+  {
+    notifyClients(getSliderValues());
   }
 }
+
 void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
 {
   switch (type)
@@ -245,11 +371,10 @@ void setup()
 
   // TODO Really load them
   // And close Perferences afterwards...
-  Serial.println("Settings:");
-  Serial.println("0:");
-  Serial.println(ccSettings[0].toString());
-  Serial.println("1:");
-  Serial.println(ccSettings[1].toString());
+  Serial.println("Settings on boot:");
+  serializeJsonPretty(ccSettings[0].toJSON(), Serial);
+  // Serial.println("1:");
+  // Serial.println(ccSettings[1].toString());
 
   // ccSettings[0].lRgb[0] = "abc";
   // ccSettings[1].lWhite[0] = 50;
@@ -324,20 +449,21 @@ void setup()
   server.begin();
 
   // Neopixels
-  NeoPixel.begin(); // initialize NeoPixel strip object (REQUIRED)
+  NeoPixel.begin();            // initialize NeoPixel strip object (REQUIRED)
+  NeoPixel.setBrightness(255); // Max brightness
 
   // Audio
-  // Setup I2S
-  audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
-  // Set Volume
-  audio.setVolume(audioVolume);
+  audioController.setup(I2S_BCLK, I2S_LRC, I2S_DOUT, audioVolume);
+  audioController.connecttohost("http://stream.antennethueringen.de/live/aac-64/stream.antennethueringen.de/");
 
   // Real code here
   // int result = myFunction(2, 3);
 
-  // Stepper
-  stepper1.setMaxSpeed(stepper1sps * stepper1max);
-  stepper1.setSpeed(stepper1sps * stepper1speed);
+  // Motors
+  for (AccelStepper motor : motors)
+  {
+    motor.setMaxSpeed(STEPPER_SPS * STEPPER_MAX);
+  }
 
   // Preferences
   preferences.begin("c-crib", false);
@@ -355,14 +481,6 @@ void setup()
   data.add(456);
   Serial.println("");
   serializeJsonPretty(doc, Serial);
-}
-
-void getRGB(const char *text, byte &r, byte &g, byte &b)
-{
-  long l = strtol(text + 1, NULL, 16);
-  r = l >> 16;
-  g = l >> 8;
-  b = l;
 }
 
 void loop()
@@ -384,19 +502,24 @@ void loop()
     digitalWrite(led, ledState);
 
     // Neopixel
-    NeoPixel.clear();
-    NeoPixel.setPixelColor(0, NeoPixel.Color(127, 0, 0, 0));
-    Serial.println("Color1Val: " + color1value);
-    getRGB(color1value.c_str(), r, g, b);
-    String red = color1value.substring(0, 2);
-    String green = color1value.substring(2, 4);
-    String blue = color1value.substring(4, 6);
-    Serial.print("red: ");
-    Serial.println(r);
-    Serial.print("green: ");
-    Serial.println(g);
-    Serial.print("blue: ");
-    Serial.println(b);
+    // NeoPixel.clear();
+    // NeoPixel.setPixelColor(0, NeoPixel.Color(127, 0, 0, 0));
+    // Serial.println("Color1Val: " + color1value);
+    // getRGB(color1value.c_str(), r, g, b);
+    // String red = color1value.substring(0, 2);
+    // String green = color1value.substring(2, 4);
+    // String blue = color1value.substring(4, 6);
+    // NeoPixel.setPixelColor(1, NeoPixel.Color(r, g, b, 0));
+    // NeoPixel.setPixelColor(2, NeoPixel.Color(0, 0, 0, 0));
+    // NeoPixel.setPixelColor(3, NeoPixel.Color(0, 0, 0, 0));
+    // NeoPixel.setBrightness(dutyCycle1);
+    // NeoPixel.show();
+    // Serial.print("red: ");
+    // Serial.println(r);
+    // Serial.print("green: ");
+    // Serial.println(g);
+    // Serial.print("blue: ");
+    // Serial.println(b);
     // Serial.println("red: " + red);
     // Serial.println("green: " + green);
     // Serial.println("blue: " + blue);
@@ -406,89 +529,28 @@ void loop()
     // Serial.println("red2: " + red2);
     // Serial.println("green2: " + green2);
 
-    NeoPixel.setPixelColor(1, NeoPixel.Color(r, g, b, 0));
-    NeoPixel.setPixelColor(2, NeoPixel.Color(0, 0, 0, 0));
-    NeoPixel.setPixelColor(3, NeoPixel.Color(0, 0, 0, 0));
-    NeoPixel.setBrightness(dutyCycle1);
-    NeoPixel.show();
-
     Serial.print("Preference: ");
-    Serial.println(preferences.getString("source1"));
+    // Serial.println(preferences.getString("source1"));
     Serial.println("Settings 0:");
     serializeJsonPretty(ccSettings[0].toJSON(), Serial);
-    Serial.println("Settings 1:");
-    serializeJsonPretty(ccSettings[1].toJSON(), Serial);
+    // Serial.println("Settings 1:");
+    // serializeJsonPretty(ccSettings[1].toJSON(), Serial);
   }
 
   // Webserver
   ws.cleanupClients();
 
   // Audio
-  audio.loop();
+  audioController.loop();
 
   // Stepper
-  stepper1.runSpeed();
+  for (AccelStepper motor : motors) {
+    motor.runSpeed();
+  }
 }
 
 // put function definitions here:
 int myFunction(int x, int y)
 {
   return x + y;
-}
-
-// Audio stuff (optional)
-void audio_info(const char *info)
-{
-  Serial.print("info        ");
-  Serial.println(info);
-}
-void audio_id3data(const char *info)
-{ // id3 metadata
-  Serial.print("id3data     ");
-  Serial.println(info);
-}
-void audio_eof_mp3(const char *info)
-{ // end of file
-  Serial.print("eof_mp3     ");
-  Serial.println(info);
-}
-void audio_showstation(const char *info)
-{
-  Serial.print("station     ");
-  Serial.println(info);
-}
-void audio_showstreaminfo(const char *info)
-{
-  Serial.print("streaminfo  ");
-  Serial.println(info);
-}
-void audio_showstreamtitle(const char *info)
-{
-  Serial.print("streamtitle ");
-  Serial.println(info);
-}
-void audio_bitrate(const char *info)
-{
-  Serial.print("bitrate     ");
-  Serial.println(info);
-}
-void audio_commercial(const char *info)
-{ // duration in sec
-  Serial.print("commercial  ");
-  Serial.println(info);
-}
-void audio_icyurl(const char *info)
-{ // homepage
-  Serial.print("icyurl      ");
-  Serial.println(info);
-}
-void audio_lasthost(const char *info)
-{ // stream URL played
-  Serial.print("lasthost    ");
-  Serial.println(info);
-}
-void audio_eof_speech(const char *info)
-{
-  Serial.print("eof_speech  ");
-  Serial.println(info);
 }

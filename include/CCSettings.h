@@ -1,8 +1,8 @@
 #ifndef CCSETTINGS_H
 #define CCSETTINGS_H
 
-#define L_RGB 4
-#define L_WHITE 4
+#define L_RGB 5
+#define L_WHITE 5
 #define M_SPEED 1
 #define A_TYPE 2
 #define A_PARAM 2
