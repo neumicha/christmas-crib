@@ -183,6 +183,10 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
       { // Lights
         updateLights(&ccSettings[0]);
       }
+      else if (key.indexOf("m") == 0)
+      { // Motors
+        updateMotors(&ccSettings[0]);
+      }
       // TODO Implement other cases (white, motors, ...) and update those things after change
     }
     // if (message.indexOf("1s") >= 0)
@@ -544,7 +548,8 @@ void loop()
   audioController.loop();
 
   // Stepper
-  for (AccelStepper motor : motors) {
+  for (AccelStepper motor : motors)
+  {
     motor.runSpeed();
   }
 }
