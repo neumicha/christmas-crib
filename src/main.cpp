@@ -47,12 +47,12 @@ CCSettings ccSettings[2];
 // Blink LED
 constexpr int led = 2;            // ESP32 Pin to which onboard LED is connected
 unsigned long previousMillis = 0; // will store last time LED was updated
-constexpr long interval = 10000;  // interval at which to blink (milliseconds)
+constexpr long interval = 1000;   // interval at which to blink (milliseconds)
 int ledState = LOW;               // ledState used to set the LED
 
 // Neopixels
 constexpr int PIN_NEO_PIXEL = 16; // The ESP32 pin GPIO16 connected to NeoPixel
-constexpr int NUM_PIXELS = 5;     // The number of LEDs (pixels) on NeoPixel LED strip
+constexpr int NUM_PIXELS = 8;     // The number of LEDs (pixels) on NeoPixel LED strip
 Adafruit_NeoPixel NeoPixel(NUM_PIXELS, PIN_NEO_PIXEL, NEO_GRBW + NEO_KHZ800);
 
 // Audio
@@ -71,7 +71,7 @@ constexpr int STEPPER1_IN2 = 26;
 constexpr int STEPPER1_IN3 = 27;
 constexpr int STEPPER1_IN4 = 14;
 constexpr int STEPPER_MAX = 10;
-#define STEPPER_SPS ((2048 * 16) / 60) // steps per second for one revolution
+constexpr float STEPPER_SPS = 2048; // steps per second for one revolution
 AccelStepper motors[1] = {AccelStepper(AccelStepper::FULL4WIRE, STEPPER1_IN1, STEPPER1_IN3, STEPPER1_IN2, STEPPER1_IN4)};
 
 Preferences preferences;
@@ -116,13 +116,16 @@ void getRGB(const char *text, byte &r, byte &g, byte &b)
 
 void updateLights(CCSettings *settings)
 {
-  NeoPixel.clear();
+  // NeoPixel.clear();
   for (int i = 0; i < 4; i++) // TODO Set boundary to define
   {
     getRGB(settings->stringSettings["lRgb"][i].c_str(), r, g, b);
-    NeoPixel.setPixelColor(i, NeoPixel.Color(r, g, b, settings->intSettings["lWhite"][i]));
+    NeoPixel.setPixelColor(i, NeoPixel.Color(NeoPixel.gamma8(r), NeoPixel.gamma8(g), NeoPixel.gamma8(b), NeoPixel.gamma8(settings->intSettings["lWhite"][i])));
   }
-  NeoPixel.setPixelColor(4, NeoPixel.Color(0, 0, 0, 0));
+  NeoPixel.setPixelColor(4, NeoPixel.Color(10, 0, 0, 0));
+  NeoPixel.setPixelColor(5, NeoPixel.Color(0, 10, 0, 0));
+  NeoPixel.setPixelColor(6, NeoPixel.Color(0, 0, 10, 0));
+  NeoPixel.setPixelColor(7, NeoPixel.Color(0, 0, 0, 10));
   NeoPixel.show();
 }
 
@@ -130,7 +133,9 @@ void updateMotors(CCSettings *settings)
 {
   for (int i = 0; i < 1; i++) // TODO Set boundary to define
   {
-    motors[i].setSpeed(STEPPER_SPS * min(abs(settings->intSettings["mSpeed"][i]), STEPPER_MAX));
+    motors[i].setMaxSpeed(10000);
+    motors[i]
+        .setSpeed(STEPPER_SPS * min(abs(settings->intSettings["mSpeed"][i]), STEPPER_MAX));
     Serial.print("Setting motor speed to ");
     Serial.println(STEPPER_SPS * min(abs(settings->intSettings["mSpeed"][i]), STEPPER_MAX));
   }
@@ -190,7 +195,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
       Serial.println(value);
       Serial.print("Full message ");
       Serial.println(message);
-      String ints[] = {"lWhite", "mSpeed", "aType", "aParam", "sVolume"};
+      String ints[] = {"lWhite", "mSpeed", "sVolume"};
       String strings[] = {"lRgb", "sSource"};
       String bools[] = {"sState"};
       if (std::find(std::begin(ints), std::end(ints), key) != std::end(ints))
@@ -215,35 +220,11 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
         updateMotors(&ccSettings[0]);
       }
       else if (key.indexOf("s") == 0)
-      { // Motors
+      { // Sound
         updateSound(&ccSettings[0]);
       }
-      // TODO Implement other cases (white, motors, ...) and update those things after change
+      // TODO notifyClients(getSliderValues());
     }
-    // if (message.indexOf("1s") >= 0)
-    // {
-    //   sliderValue1 = message.substring(2);
-    //   dutyCycle1 = map(sliderValue1.toInt(), 0, 100, 0, 255);
-    //   Serial.println(dutyCycle1);
-    //   Serial.print(getSliderValues());
-    //   notifyClients(getSliderValues());
-    // }
-    // if (message.indexOf("2s") >= 0)
-    // {
-    //   sliderValue2 = message.substring(2);
-    //   dutyCycle2 = map(sliderValue2.toInt(), 0, 100, 0, 255);
-    //   Serial.println(dutyCycle2);
-    //   Serial.print(getSliderValues());
-    //   notifyClients(getSliderValues());
-    // }
-    // if (message.indexOf("3s") >= 0)
-    // {
-    //   sliderValue3 = message.substring(2);
-    //   dutyCycle3 = map(sliderValue3.toInt(), 0, 100, 0, 255);
-    //   Serial.println(dutyCycle3);
-    //   Serial.print(getSliderValues());
-    //   notifyClients(getSliderValues());
-    // }
 
     // Save preferences
     if (message.indexOf("pSave") >= 0)
@@ -263,8 +244,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
         JsonDocument settings;
         deserializeJson(settings, loadString);
         Serial.println("Settings after loading:");
-        // serializeJsonPretty(settings, Serial);
-        // ccSettings[0].intSettings["sVolume"][0] = settings["sVolume"];
+        serializeJsonPretty(settings, Serial);
       }
     }
 
@@ -321,11 +301,6 @@ void setup()
   // And close Perferences afterwards...
   Serial.println("Settings on boot:");
   serializeJsonPretty(ccSettings[0].toJSON(), Serial);
-  // Serial.println("1:");
-  // Serial.println(ccSettings[1].toString());
-
-  // ccSettings[0].lRgb[0] = "abc";
-  // ccSettings[1].lWhite[0] = 50;
 
   initFS();
 
@@ -444,9 +419,14 @@ void loop()
     // set the LED with the ledState of the variable:
     digitalWrite(led, ledState);
 
-    Serial.print("Preference: ");
-    Serial.println("Settings 0:");
+    Serial.print("Preferences: ");
     serializeJsonPretty(ccSettings[0].toJSON(), Serial);
+
+    // Fire animation
+    NeoPixel.setPixelColor(5, NeoPixel.Color(random(0, 255), random(0, 50), 0, random(0, 20)));
+    NeoPixel.setPixelColor(6, NeoPixel.Color(random(0, 255), random(0, 50), 0, random(0, 20)));
+    NeoPixel.setPixelColor(7, NeoPixel.Color(random(0, 255), random(0, 50), 0, random(0, 20)));
+    NeoPixel.show();
   }
 
   // Webserver
@@ -460,10 +440,4 @@ void loop()
   {
     motors[i].runSpeed();
   }
-}
-
-// put function definitions here:
-int myFunction(int x, int y)
-{
-  return x + y;
 }

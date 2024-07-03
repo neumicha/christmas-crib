@@ -22,8 +22,6 @@ struct CCSettings
     std::map<String, std::vector<int>> intSettings{
         {"lWhite", std::vector<int>{std::vector<int>(L_WHITE, 0)}},
         {"mSpeed", std::vector<int>{std::vector<int>(M_SPEED, 0)}},
-        {"aType", std::vector<int>{std::vector<int>(A_TYPE, 0)}},
-        {"aParam", std::vector<int>{std::vector<int>(A_PARAM, 0)}},
         {"sVolume", std::vector<int>{std::vector<int>(S_VOLUME, 0)}},
     };
     std::map<String, std::vector<String>> stringSettings{
