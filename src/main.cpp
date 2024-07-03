@@ -76,6 +76,10 @@ AccelStepper motors[1] = {AccelStepper(AccelStepper::FULL4WIRE, STEPPER1_IN1, ST
 
 Preferences preferences;
 
+long animationFireLastTime = 0;
+long animationTimerLastTime = 0;
+int animationInterval = 0;
+
 // Get Slider Values
 String getSliderValues()
 {
@@ -101,9 +105,11 @@ void initFS()
   }
 }
 
-void notifyClients(String sliderValues)
+void notifyClients(CCSettings *settings)
 {
-  ws.textAll(sliderValues);
+  String str;
+  serializeJson(settings->toJSON(), str);
+  ws.textAll(str);
 }
 
 void getRGB(const char *text, byte &r, byte &g, byte &b)
@@ -117,15 +123,11 @@ void getRGB(const char *text, byte &r, byte &g, byte &b)
 void updateLights(CCSettings *settings)
 {
   // NeoPixel.clear();
-  for (int i = 0; i < 4; i++) // TODO Set boundary to define
+  for (int i = 0; i <= 4; i++) // TODO Set boundary to define
   {
     getRGB(settings->stringSettings["lRgb"][i].c_str(), r, g, b);
     NeoPixel.setPixelColor(i, NeoPixel.Color(NeoPixel.gamma8(r), NeoPixel.gamma8(g), NeoPixel.gamma8(b), NeoPixel.gamma8(settings->intSettings["lWhite"][i])));
   }
-  NeoPixel.setPixelColor(4, NeoPixel.Color(10, 0, 0, 0));
-  NeoPixel.setPixelColor(5, NeoPixel.Color(0, 10, 0, 0));
-  NeoPixel.setPixelColor(6, NeoPixel.Color(0, 0, 10, 0));
-  NeoPixel.setPixelColor(7, NeoPixel.Color(0, 0, 0, 10));
   NeoPixel.show();
 }
 
@@ -195,7 +197,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
       Serial.println(value);
       Serial.print("Full message ");
       Serial.println(message);
-      String ints[] = {"lWhite", "mSpeed", "sVolume"};
+      String ints[] = {"lWhite", "mSpeed", "aType", "sVolume"};
       String strings[] = {"lRgb", "sSource"};
       String bools[] = {"sState"};
       if (std::find(std::begin(ints), std::end(ints), key) != std::end(ints))
@@ -223,7 +225,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
       { // Sound
         updateSound(&ccSettings[0]);
       }
-      // TODO notifyClients(getSliderValues());
+      notifyClients(&ccSettings[0]);
     }
 
     // Save preferences
@@ -258,7 +260,7 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
   }
   if (strcmp(reinterpret_cast<char *>(data), "getValues") == 0)
   {
-    notifyClients(getSliderValues());
+    notifyClients(&ccSettings[0]);
   }
 }
 
@@ -377,7 +379,7 @@ void setup()
 
   // Audio
   audioController.setup(I2S_BCLK, I2S_LRC, I2S_DOUT, audioVolume);
-  audioController.connecttohost("http://stream.antennethueringen.de/live/aac-64/stream.antennethueringen.de/");
+  // audioController.connecttohost("http://stream.antennethueringen.de/live/aac-64/stream.antennethueringen.de/");
 
   // Motors
   for (int i = 0; i < 1; i++)
@@ -411,6 +413,79 @@ void loop()
 
   // loop to blink without delay
   unsigned long currentMillis = millis();
+
+  // Fire animation
+  if (millis() - animationFireLastTime >= interval)
+  {
+    if (ccSettings[0].intSettings["aType"][0] == 0)
+    {
+      for (int i = 5; i <= 7; i++)
+      {
+        NeoPixel.setPixelColor(i, NeoPixel.Color(random(200, 255), random(30, 70), 0, random(0, 20)));
+      }
+      NeoPixel.show();
+    }
+    else if (ccSettings[0].intSettings["aType"][0] == 1)
+    {
+      for (int i = 5; i <= 7; i++)
+      {
+        NeoPixel.setPixelColor(i, NeoPixel.Color(250, 50, 0, 0));
+      }
+      NeoPixel.show();
+    }
+    else if (ccSettings[0].intSettings["aType"][0] == 2)
+    {
+      animationInterval = random(50, 100);
+      for (int i = 5; i <= 7; i++)
+      {
+        NeoPixel.setPixelColor(i, NeoPixel.Color(random(200, 255), random(30, 70), 0, random(0, 20)));
+        if (random(0, 2)) // Random boolean
+        {
+          NeoPixel.setPixelColor(i, NeoPixel.Color(0, 0, 0, 0));
+        }
+      }
+      NeoPixel.show();
+    }
+    else if (ccSettings[0].intSettings["aType"][0] == 3)
+    {
+      for (int i = 5; i <= 7; i++)
+      {
+        NeoPixel.setPixelColor(i, NeoPixel.Color(250, 50, 0, 0));
+        if (!random(0, 10)) // Random boolean
+        {
+          NeoPixel.setPixelColor(i, NeoPixel.Color(0, 0, 0, 0));
+        }
+      }
+      NeoPixel.show();
+    }
+    else if (ccSettings[0].intSettings["aType"][0] == 4)
+    {
+      animationInterval = random(100, 150);
+      for (int i = 5; i <= 7; i++)
+      {
+        NeoPixel.setPixelColor(i, NeoPixel.Color(random(200, 255), random(30, 70), 0, random(0, 20)));
+        if (random(0, 2)) // Random boolean
+        {
+          NeoPixel.setPixelColor(i, NeoPixel.Color(random(50, 60), random(5, 10), 0, 0));
+        }
+      }
+      NeoPixel.show();
+    }
+    else if (ccSettings[0].intSettings["aType"][0] == 5)
+    {
+      animationInterval = random(0, 80);
+      for (int i = 5; i <= 7; i++)
+      {
+        NeoPixel.setPixelColor(i, NeoPixel.Color(random(240, 255), random(40, 60), 0, 0));
+        if (!random(0, 10)) // Random boolean
+        {
+          NeoPixel.setPixelColor(i, NeoPixel.Color(0, 0, 0, 0));
+        }
+      }
+      NeoPixel.show();
+    }
+  }
+
   if (currentMillis - previousMillis >= interval)
   { // save the last time you blinked the LED
     previousMillis = currentMillis;
@@ -421,12 +496,6 @@ void loop()
 
     Serial.print("Preferences: ");
     serializeJsonPretty(ccSettings[0].toJSON(), Serial);
-
-    // Fire animation
-    NeoPixel.setPixelColor(5, NeoPixel.Color(random(0, 255), random(0, 50), 0, random(0, 20)));
-    NeoPixel.setPixelColor(6, NeoPixel.Color(random(0, 255), random(0, 50), 0, random(0, 20)));
-    NeoPixel.setPixelColor(7, NeoPixel.Color(random(0, 255), random(0, 50), 0, random(0, 20)));
-    NeoPixel.show();
   }
 
   // Webserver
