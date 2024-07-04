@@ -6,7 +6,8 @@ ESP32 Christmas Crib with support for:
 
 Code is not fully optimized for performance but instead for easy changing etc.
 
-
+## Screenshots
+![Screenshot of Adminpanel](https://github.com/neumicha/christmas-crib/blob/main/docs/img/screenshot.png)
 
 ## How-To
 
