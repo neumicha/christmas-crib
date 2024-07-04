@@ -7,21 +7,16 @@
 #include <WiFiUdp.h>
 #include "ArduinoOTA.h"
 #include <Adafruit_NeoPixel.h>
-
 #include <Credentials.h>
 #include "SPIFFS.h"
 #include <string>
 #include <AccelStepper.h>
-
 #include <Preferences.h>
-#include "CCSettings.h"
 #include <ArduinoJson.h>
-
-#include "AudioController.h"
-
-// To erase nvs partition
 #include <nvs_flash.h>
-#include <FireController.h>
+#include "CCSettings.h"
+#include "AudioController.h"
+#include "FireController.h"
 
 // WiFi network credentials
 constexpr char *ssid = WIFI_SSID;
@@ -32,7 +27,7 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 String message = "";
 
-// Settings (currently only one supported)
+// Settings (currently only one supported, however)
 CCSettings ccSettings[1];
 
 // Blink LED
@@ -46,7 +41,7 @@ byte r, g, b;
 constexpr int PIN_NEO_PIXEL = 16; // The ESP32 pin GPIO16 connected to NeoPixel
 constexpr int NUM_PIXELS = 8;     // The number of LEDs (pixels) on NeoPixel LED strip
 Adafruit_NeoPixel NeoPixel(NUM_PIXELS, PIN_NEO_PIXEL, NEO_GRBW + NEO_KHZ800);
-FireController fireController(&NeoPixel, 5, NUM_PIXELS-1);
+FireController fireController(&NeoPixel, LIGHTS, NUM_PIXELS - 1); // Rest of Neopixels is fire
 
 // Audio
 // I2S Connection
@@ -72,11 +67,6 @@ Preferences preferences;
 // Get Slider Values
 String getSliderValues()
 {
-  // sliderValues["sliderValue1"] = String(sliderValue1);
-  // sliderValues["sliderValue2"] = String(sliderValue2);
-  // sliderValues["sliderValue3"] = String(sliderValue3);
-  // String jsonString = JSON.stringify(sliderValues);
-  // return jsonString;
   return "";
 }
 
@@ -112,7 +102,7 @@ void getRGB(const char *text, byte &r, byte &g, byte &b)
 void updateLights(CCSettings *settings)
 {
   // NeoPixel.clear();
-  for (int i = 0; i <= 4; i++) // TODO Set boundary to define
+  for (int i = 0; i < LIGHTS; i++)
   {
     getRGB(settings->stringSettings["lRgb"][i].c_str(), r, g, b);
     NeoPixel.setPixelColor(i, NeoPixel.Color(NeoPixel.gamma8(r), NeoPixel.gamma8(g), NeoPixel.gamma8(b), NeoPixel.gamma8(settings->intSettings["lWhite"][i])));
@@ -122,7 +112,7 @@ void updateLights(CCSettings *settings)
 
 void updateMotors(CCSettings *settings)
 {
-  for (int i = 0; i < 1; i++) // TODO Set boundary to define
+  for (int i = 0; i < MOTORS; i++)
   {
     motors[i].setMaxSpeed(10000);
     motors[i]
@@ -134,7 +124,7 @@ void updateMotors(CCSettings *settings)
 
 void updateSound(CCSettings *settings)
 {
-  for (int i = 0; i < 1; i++) // TODO Set boundary to define
+  for (int i = 0; i < SOUNDS; i++)
   // TODO Put audioController into array
   {
     if (settings->stringSettings["sSource"][i] != "" && settings->boolSettings["sState"][i] && settings->intSettings["sVolume"][i] > 0)
@@ -157,6 +147,30 @@ void updateSound(CCSettings *settings)
   }
 }
 
+void showSettings()
+{
+  // Update everything
+  updateLights(&ccSettings[0]);
+  updateMotors(&ccSettings[0]);
+  updateSound(&ccSettings[0]);
+  notifyClients(&ccSettings[0]);
+}
+
+void loadSettings()
+{
+  Serial.print("Loading...");
+  String loadString = preferences.getString("settings");
+  if (!loadString.isEmpty())
+  {
+    JsonDocument settings;
+    deserializeJson(settings, loadString);
+    ccSettings[0] = *new CCSettings(loadString);
+    Serial.println("Settings after loading:");
+    serializeJsonPretty(ccSettings[0].toJSON(), Serial);
+    showSettings();
+  }
+}
+
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
 {
   AwsFrameInfo *info = (AwsFrameInfo *)arg;
@@ -167,14 +181,13 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
     Serial.print("Handling websocket message");
     const char ind_preset = message.indexOf("p=");
     if (ind_preset == 0)
-    { // new format with presets
+    {
       long preset = message.substring(ind_preset + 2, ind_preset + 3).toInt();
       String keyAndValue = message.substring(ind_preset + 4); // Part after "&"
       const char ind_equals = keyAndValue.indexOf("=");
       String key = keyAndValue.substring(0, ind_equals - 1);
       uint8_t keyIndex = keyAndValue.substring(ind_equals - 1, ind_equals).toInt();
       String value = keyAndValue.substring(ind_equals + 1);
-      // TODO Pay attention when receiving that fancy start/stop hack
       Serial.println("Received the following command:");
       Serial.print("Preset ");
       Serial.println(preset);
@@ -227,24 +240,14 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
     }
     else if (message.indexOf("pLoad") >= 0)
     {
-      Serial.print("Loading...");
-      String loadString = preferences.getString("settings");
-      if (!loadString.isEmpty())
-      {
-        JsonDocument settings;
-        deserializeJson(settings, loadString);
-        Serial.println("Settings after loading:");
-        serializeJsonPretty(settings, Serial);
-      }
+      loadSettings();
     }
-
-    // ccSettings[0].intSettings["lRgb"][0] = settings["lRgb"];
-  }
-  else if (message.indexOf("pReset") >= 0)
-  {
-    Serial.print("Resetting...");
-    nvs_flash_erase(); // erase the NVS partition and...
-    nvs_flash_init();  // initialize the NVS partition.
+    else if (message.indexOf("pReset") >= 0)
+    {
+      Serial.print("Resetting...");
+      nvs_flash_erase(); // erase the NVS partition and...
+      nvs_flash_init();  // initialize the NVS partition.
+    }
   }
   if (strcmp(reinterpret_cast<char *>(data), "getValues") == 0)
   {
@@ -284,13 +287,6 @@ void setup()
   Serial.println("Booting");
   Serial.print("Flash: ");
   Serial.println(ESP.getFlashChipSize());
-
-  Serial.println("Loading preferences");
-
-  // TODO Really load them
-  // And close Perferences afterwards...
-  Serial.println("Settings on boot:");
-  serializeJsonPretty(ccSettings[0].toJSON(), Serial);
 
   initFS();
 
@@ -373,14 +369,17 @@ void setup()
   for (int i = 0; i < 1; i++)
   {
     motors[i].setMaxSpeed(STEPPER_SPS * STEPPER_MAX);
-    motors[i].setSpeed(0);
   }
-
-  // Preferences
-  preferences.begin("c-crib", false);
 
   // Blink LED
   pinMode(led, OUTPUT);
+
+  // Preferences
+  preferences.begin("c-crib", false);
+  Serial.println("Loading preferences");
+  loadSettings();
+  Serial.println("Settings on boot:");
+  serializeJsonPretty(ccSettings[0].toJSON(), Serial);
 }
 
 void loop()
@@ -413,7 +412,7 @@ void loop()
   audioController.loop();
 
   // Stepper
-  for (int i = 0; i < 1; i++) // TODO Use definition of motor count for max value
+  for (int i = 0; i < MOTORS; i++)
   {
     motors[i].runSpeed();
   }
