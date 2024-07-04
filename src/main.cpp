@@ -10,7 +10,6 @@
 
 #include <Credentials.h>
 #include "SPIFFS.h"
-// #include <Arduino_JSON.h>
 #include <string>
 #include <AccelStepper.h>
 
@@ -22,6 +21,7 @@
 
 // To erase nvs partition
 #include <nvs_flash.h>
+#include <FireController.h>
 
 // WiFi network credentials
 constexpr char *ssid = WIFI_SSID;
@@ -31,18 +31,9 @@ constexpr char *password = WIFI_PW;
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 String message = "";
-String sliderValue1 = "0";
-String sliderValue2 = "0";
-String sliderValue3 = "0";
-String color1value = "0";
-byte r, g, b;
-int dutyCycle1;
-int dutyCycle2;
-int dutyCycle3;
-const int resolution = 8;
-// Json Variable to Hold Slider Values
-// JSONVar sliderValues;
-CCSettings ccSettings[2];
+
+// Settings (currently only one supported)
+CCSettings ccSettings[1];
 
 // Blink LED
 constexpr int led = 2;            // ESP32 Pin to which onboard LED is connected
@@ -51,9 +42,11 @@ constexpr long interval = 1000;   // interval at which to blink (milliseconds)
 int ledState = LOW;               // ledState used to set the LED
 
 // Neopixels
+byte r, g, b;
 constexpr int PIN_NEO_PIXEL = 16; // The ESP32 pin GPIO16 connected to NeoPixel
 constexpr int NUM_PIXELS = 8;     // The number of LEDs (pixels) on NeoPixel LED strip
 Adafruit_NeoPixel NeoPixel(NUM_PIXELS, PIN_NEO_PIXEL, NEO_GRBW + NEO_KHZ800);
+FireController fireController(&NeoPixel, 5, NUM_PIXELS-1);
 
 // Audio
 // I2S Connection
@@ -61,7 +54,7 @@ constexpr int I2S_DOUT = 18;
 constexpr int I2S_BCLK = 19;
 constexpr int I2S_LRC = 21;
 // Volume
-int audioVolume = 5;
+int audioVolume = 0;
 // Audio object
 AudioController audioController;
 
@@ -75,10 +68,6 @@ constexpr float STEPPER_SPS = 2048; // steps per second for one revolution
 AccelStepper motors[1] = {AccelStepper(AccelStepper::FULL4WIRE, STEPPER1_IN1, STEPPER1_IN3, STEPPER1_IN2, STEPPER1_IN4)};
 
 Preferences preferences;
-
-long animationFireLastTime = 0;
-long animationTimerLastTime = 0;
-int animationInterval = 0;
 
 // Get Slider Values
 String getSliderValues()
@@ -232,7 +221,6 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len)
     if (message.indexOf("pSave") >= 0)
     {
       Serial.print("Saving...");
-      // preferences.putString(0, static_cast<char *>(ccSettings[0].toJSON()));
       String saveString;
       serializeJson(ccSettings[0].toJSON(), saveString);
       preferences.putString("settings", saveString);
@@ -390,20 +378,9 @@ void setup()
 
   // Preferences
   preferences.begin("c-crib", false);
-  preferences.putString("source1", "int:hallo");
 
   // Blink LED
   pinMode(led, OUTPUT);
-
-  // Test of JSON
-  JsonDocument doc;
-  doc["ex1"] = "abcdef";
-  doc["ex2"] = 123;
-  JsonArray data = doc["ex3"].to<JsonArray>();
-  data.add("abc");
-  data.add(456);
-  Serial.println("");
-  serializeJsonPretty(doc, Serial);
 }
 
 void loop()
@@ -414,77 +391,8 @@ void loop()
   // loop to blink without delay
   unsigned long currentMillis = millis();
 
-  // Fire animation
-  if (millis() - animationFireLastTime >= interval)
-  {
-    if (ccSettings[0].intSettings["aType"][0] == 0)
-    {
-      for (int i = 5; i <= 7; i++)
-      {
-        NeoPixel.setPixelColor(i, NeoPixel.Color(random(200, 255), random(30, 70), 0, random(0, 20)));
-      }
-      NeoPixel.show();
-    }
-    else if (ccSettings[0].intSettings["aType"][0] == 1)
-    {
-      for (int i = 5; i <= 7; i++)
-      {
-        NeoPixel.setPixelColor(i, NeoPixel.Color(250, 50, 0, 0));
-      }
-      NeoPixel.show();
-    }
-    else if (ccSettings[0].intSettings["aType"][0] == 2)
-    {
-      animationInterval = random(50, 100);
-      for (int i = 5; i <= 7; i++)
-      {
-        NeoPixel.setPixelColor(i, NeoPixel.Color(random(200, 255), random(30, 70), 0, random(0, 20)));
-        if (random(0, 2)) // Random boolean
-        {
-          NeoPixel.setPixelColor(i, NeoPixel.Color(0, 0, 0, 0));
-        }
-      }
-      NeoPixel.show();
-    }
-    else if (ccSettings[0].intSettings["aType"][0] == 3)
-    {
-      for (int i = 5; i <= 7; i++)
-      {
-        NeoPixel.setPixelColor(i, NeoPixel.Color(250, 50, 0, 0));
-        if (!random(0, 10)) // Random boolean
-        {
-          NeoPixel.setPixelColor(i, NeoPixel.Color(0, 0, 0, 0));
-        }
-      }
-      NeoPixel.show();
-    }
-    else if (ccSettings[0].intSettings["aType"][0] == 4)
-    {
-      animationInterval = random(100, 150);
-      for (int i = 5; i <= 7; i++)
-      {
-        NeoPixel.setPixelColor(i, NeoPixel.Color(random(200, 255), random(30, 70), 0, random(0, 20)));
-        if (random(0, 2)) // Random boolean
-        {
-          NeoPixel.setPixelColor(i, NeoPixel.Color(random(50, 60), random(5, 10), 0, 0));
-        }
-      }
-      NeoPixel.show();
-    }
-    else if (ccSettings[0].intSettings["aType"][0] == 5)
-    {
-      animationInterval = random(0, 80);
-      for (int i = 5; i <= 7; i++)
-      {
-        NeoPixel.setPixelColor(i, NeoPixel.Color(random(240, 255), random(40, 60), 0, 0));
-        if (!random(0, 10)) // Random boolean
-        {
-          NeoPixel.setPixelColor(i, NeoPixel.Color(0, 0, 0, 0));
-        }
-      }
-      NeoPixel.show();
-    }
-  }
+  // Fire
+  fireController.animate(ccSettings[0].intSettings["aType"][0]);
 
   if (currentMillis - previousMillis >= interval)
   { // save the last time you blinked the LED
@@ -505,7 +413,7 @@ void loop()
   audioController.loop();
 
   // Stepper
-  for (int i = 0; i < 1; i++)
+  for (int i = 0; i < 1; i++) // TODO Use definition of motor count for max value
   {
     motors[i].runSpeed();
   }
