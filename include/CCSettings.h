@@ -1,14 +1,10 @@
 #ifndef CCSETTINGS_H
 #define CCSETTINGS_H
 
-#define L_RGB 4
-#define L_WHITE 4
-#define M_SPEED 1
-#define A_TYPE 2
-#define A_PARAM 2
-#define S_SOURCE 1
-#define S_VOLUME 1
-#define S_STATE 1
+#define LIGHTS 5
+#define MOTORS 1
+#define ANIMATIONS 1
+#define SOUNDS 1
 
 #include "WString.h"
 #include "ostringstream.cpp"
@@ -20,18 +16,17 @@ struct CCSettings
 {
     // std::vector<int> lWhite{std::vector<int>(L_WHITE, 0)};
     std::map<String, std::vector<int>> intSettings{
-        {"lWhite", std::vector<int>{std::vector<int>(L_WHITE, 0)}},
-        {"mSpeed", std::vector<int>{std::vector<int>(M_SPEED, 0)}},
-        {"aType", std::vector<int>{std::vector<int>(A_TYPE, 0)}},
-        {"aParam", std::vector<int>{std::vector<int>(A_PARAM, 0)}},
-        {"sVolume", std::vector<int>{std::vector<int>(S_VOLUME, 0)}},
+        {"lWhite", std::vector<int>{std::vector<int>(LIGHTS, 0)}},
+        {"mSpeed", std::vector<int>{std::vector<int>(MOTORS, 0)}},
+        {"aType", std::vector<int>{std::vector<int>(ANIMATIONS, 0)}},
+        {"sVolume", std::vector<int>{std::vector<int>(SOUNDS, 0)}},
     };
     std::map<String, std::vector<String>> stringSettings{
-        {"lRgb", std::vector<String>{std::vector<String>(L_RGB, "#000000")}},
-        {"sSource", std::vector<String>{std::vector<String>(S_SOURCE, "")}},
+        {"lRgb", std::vector<String>{std::vector<String>(LIGHTS, "#000000")}},
+        {"sSource", std::vector<String>{std::vector<String>(SOUNDS, "https://stream.antenne.de/antenne/stream/mp3")}},
     };
     std::map<String, std::vector<bool>> boolSettings{
-        {"sState", std::vector<bool>{std::vector<bool>(S_STATE, false)}},
+        {"sState", std::vector<bool>{std::vector<bool>(SOUNDS, false)}},
     };
 
     // Lights

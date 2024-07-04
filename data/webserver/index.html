@@ -33,11 +33,11 @@
                     <p class="card-title">Innenbeleuchtung</p>
                     <p class="state">Farbe: <span id="0lRgb0_value"></span></p>
                     <p class="switch">
-                        <input type="color" onchange="setValue(this)" id="0lRgb0" value="0">
+                        <input type="color" onchange="setValue(this)" id="0lRgb0" value="#000000">
                     </p>
-                    <p class="state">Weiß: <span id="0lWhite0_value"></span> %</p>
+                    <p class="state">Weiß: <span id="0lWhite0_value"></span></p>
                     <p class="switch">
-                        <input type="range" onchange="setValue(this)" id="0lWhite0" min="0" max="100" step="1" value="0"
+                        <input type="range" onchange="setValue(this)" id="0lWhite0" min="0" max="255" step="1" value="0"
                             class="slider">
                     </p>
                 </div>
@@ -45,11 +45,11 @@
                     <p class="card-title">Jesuskind</p>
                     <p class="state">Farbe: <span id="0lRgb1_value"></span></p>
                     <p class="switch">
-                        <input type="color" onchange="setValue(this)" id="0lRgb1" value="0">
+                        <input type="color" onchange="setValue(this)" id="0lRgb1" value="#000000">
                     </p>
-                    <p class="state">Weiß: <span id="0lWhite1_value"></span> %</p>
+                    <p class="state">Weiß: <span id="0lWhite1_value"></span></p>
                     <p class="switch">
-                        <input type="range" onchange="setValue(this)" id="0lWhite1" min="0" max="100" step="1" value="0"
+                        <input type="range" onchange="setValue(this)" id="0lWhite1" min="0" max="255" step="1" value="0"
                             class="slider">
                     </p>
                 </div>
@@ -57,11 +57,11 @@
                     <p class="card-title">Discokugel</p>
                     <p class="state">Farbe: <span id="0lRgb2_value"></span></p>
                     <p class="switch">
-                        <input type="color" onchange="setValue(this)" id="0lRgb2" value="0">
+                        <input type="color" onchange="setValue(this)" id="0lRgb2" value="#000000">
                     </p>
-                    <p class="state">Weiß: <span id="0lWhite2_value"></span> %</p>
+                    <p class="state">Weiß: <span id="0lWhite2_value"></span></p>
                     <p class="switch">
-                        <input type="range" onchange="setValue(this)" id="0lWhite2" min="0" max="100" step="1" value="0"
+                        <input type="range" onchange="setValue(this)" id="0lWhite2" min="0" max="255" step="1" value="0"
                             class="slider">
                     </p>
                     <p class="state">Geschwindigkeit: <span id="0mSpeed0_value"></span> U/min</p>
@@ -74,31 +74,46 @@
                     <p class="card-title">Klohaus</p>
                     <p class="state">Farbe: <span id="0lRgb3_value"></span></p>
                     <p class="switch">
-                        <input type="color" onchange="setValue(this)" id="0lRgb3" value="0">
+                        <input type="color" onchange="setValue(this)" id="0lRgb3" value="#000000">
                     </p>
-                    <p class="state">Weiß: <span id="0lWhite3_value"></span> %</p>
+                    <p class="state">Weiß: <span id="0lWhite3_value"></span></p>
                     <p class="switch">
-                        <input type="range" onchange="setValue(this)" id="0lWhite3" min="0" max="100" step="1" value="0"
+                        <input type="range" onchange="setValue(this)" id="0lWhite3" min="0" max="255" step="1" value="0"
                             class="slider">
                     </p>
                 </div>
                 <div class="card">
                     <p class="card-title">Laterne</p>
-                    TODO
+                    <p class="state">Farbe: <span id="0lRgb4_value"></span></p>
+                    <p class="switch">
+                        <input type="color" onchange="setValue(this)" id="0lRgb4" value="#000000">
+                    </p>
+                    <p class="state">Weiß: <span id="0lWhite4_value"></span></p>
+                    <p class="switch">
+                        <input type="range" onchange="setValue(this)" id="0lWhite4" min="0" max="255" step="1" value="0"
+                            class="slider">
+                    </p>
                 </div>
                 <div class="card">
                     <p class="card-title">Feuerstelle</p>
-                    TODO
+                    <p class="state">Animation: <span id="0aType0_value"></span></p>
+                    <select id="0aType0" onchange="setValue(this)">
+                        <option value="0">Schnelle Farbwechsel</option>
+                        <option value="1">Keine Animation</option>
+                        <option value="2">Starkes, häufiges Flackern</option>
+                        <option value="3">Starkes, seltenes Flackern</option>
+                        <option value="4">Milde, häufige Farbwechsel</option>
+                        <option value="5">Starke, seltene Farbwechsel</option>
+                    </select>
                 </div>
                 <div class="card">
                     <p class="card-title">Sound</p>
                     <p class="state">Quelle: <span id="0sSource0_value"></span></p>
-                    <select id="0sSource0">
-                        <option value="int:christmas">Weihnachten</option>
-                        <option
-                            value="http:http://stream.antennethueringen.de/live/aac-64/stream.antennethueringen.de/">
+                    <select id="0sSource0" onchange="setValue(this)">
+                        <option value="/audio/christmas.mp3">Weihnachten</option>
+                        <option value="http://stream.antennethueringen.de/live/aac-64/stream.antennethueringen.de/">
                             Antenne Thüringen</option>
-                        <option value="http:https://stream.antenne.de/antenne/stream/mp3">Antenne Bayern</option>
+                        <option value="https://stream.antenne.de/antenne/stream/mp3">Antenne Bayern</option>
                     </select>
                     <p class="state">Lautstärke: <span id="0sVolume0_value"></span>/21</p>
                     <p class="switch">
@@ -112,10 +127,16 @@
                     </p>
                 </div>
                 <div class="card">
-                    <p class="card-title">Speichern</p>
+                    <p class="card-title">Einstellungen</p>
                     <p class="state">Für später speichern</p>
                     <p class="switch">
                         <input type="button" onclick="setValue(this)" id="0pSave0" value="Speichern">
+                    </p>
+                    <p class="switch">
+                        <input type="button" onclick="setValue(this)" id="0pLoad0" value="Laden">
+                    </p>
+                    <p class="switch">
+                        <input type="button" onclick="setValue(this)" id="0pReset0" value="Zurücksetzen">
                     </p>
                     <!--<p class="switch">
                         <input type="button" onclick="setValue(this)" id="0p1reset" value="Zurücksetzen">

@@ -69,14 +69,29 @@ function onMessage(event) {
   // TODO
   console.log(event.data);
   var myObj = JSON.parse(event.data);
-  var keys = Object.keys(myObj);
 
-  for (var i = 0; i < keys.length; i++) {
-    var key = keys[i];
-    document.getElementById(key).innerHTML = myObj[key];
-    document.getElementById("slider" + (i + 1).toString()).value = myObj[key];
-  }
+  ["lWhite", "mSpeed", "lRgb", "aType", "sSource", "sVolume", "sState"].forEach(
+    (item) => {
+      for (var i = 0; i < myObj[item].length; i++) {
+        console.log(item + i);
+        document.getElementById("0" + item + i + "_value").innerHTML =
+          myObj[item][i];
+        if (item != "sState") {
+          document.getElementById("0" + item + i).value = myObj[item][i];
+        }
+      }
+    }
+  );
 }
+
+// console.log(myObj);
+// var keys = Object.keys(myObj);
+
+// for (var i = 0; i < keys.length; i++) {
+//   var key = keys[i];
+//   document.getElementById(key).innerHTML = myObj[key];
+//   document.getElementById("slider" + (i + 1).toString()).value = myObj[key];
+// }
 
 // OLD ONES
 
