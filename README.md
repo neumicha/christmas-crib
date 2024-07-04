@@ -1,7 +1,7 @@
 # christmas-crib (WORK IN PROGRESS)
 ESP32 Christmas Crib with support for:
 - Neopixel/WS2812/SK6812 LEDs
-- Audio (e.g. mp3) playback
+- Audio (e.g. mp3, streams) playback
 - Stepper motors
 
 Code is not fully optimized for performance but instead for easy changing etc.
