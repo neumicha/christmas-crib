@@ -59,7 +59,7 @@ constexpr int STEPPER1_IN2 = 26;
 constexpr int STEPPER1_IN3 = 27;
 constexpr int STEPPER1_IN4 = 14;
 constexpr int STEPPER_MAX = 10;
-constexpr float STEPPER_SPS = 2048; // steps per second for one revolution
+constexpr float STEPPER_SPS = 2048 / 60; // steps per second for one revolution
 AccelStepper motors[1] = {AccelStepper(AccelStepper::FULL4WIRE, STEPPER1_IN1, STEPPER1_IN3, STEPPER1_IN2, STEPPER1_IN4)};
 
 Preferences preferences;
@@ -114,11 +114,8 @@ void updateMotors(CCSettings *settings)
 {
   for (int i = 0; i < MOTORS; i++)
   {
-    motors[i].setMaxSpeed(10000);
     motors[i]
         .setSpeed(STEPPER_SPS * min(abs(settings->intSettings["mSpeed"][i]), STEPPER_MAX));
-    Serial.print("Setting motor speed to ");
-    Serial.println(STEPPER_SPS * min(abs(settings->intSettings["mSpeed"][i]), STEPPER_MAX));
   }
 }
 
@@ -363,10 +360,9 @@ void setup()
 
   // Audio
   audioController.setup(I2S_BCLK, I2S_LRC, I2S_DOUT, audioVolume);
-  // audioController.connecttohost("http://stream.antennethueringen.de/live/aac-64/stream.antennethueringen.de/");
 
   // Motors
-  for (int i = 0; i < 1; i++)
+  for (int i = 0; i < MOTORS; i++)
   {
     motors[i].setMaxSpeed(STEPPER_SPS * STEPPER_MAX);
   }
@@ -387,15 +383,25 @@ void loop()
   // OTA
   ArduinoOTA.handle();
 
-  // loop to blink without delay
-  unsigned long currentMillis = millis();
+  // Stepper
+  for (int i = 0; i < MOTORS; i++)
+  {
+    motors[i].runSpeed();
+  }
 
   // Fire
   fireController.animate(ccSettings[0].intSettings["aType"][0]);
 
-  if (currentMillis - previousMillis >= interval)
+  // Audio
+  audioController.loop();
+
+  // Webserver
+  ws.cleanupClients();
+
+  // loop to blink
+  if (millis() - previousMillis > interval)
   { // save the last time you blinked the LED
-    previousMillis = currentMillis;
+    previousMillis = millis();
     // if the LED is off turn it on and vice-versa:
     ledState = not(ledState);
     // set the LED with the ledState of the variable:
@@ -403,17 +409,5 @@ void loop()
 
     Serial.print("Preferences: ");
     serializeJsonPretty(ccSettings[0].toJSON(), Serial);
-  }
-
-  // Webserver
-  ws.cleanupClients();
-
-  // Audio
-  audioController.loop();
-
-  // Stepper
-  for (int i = 0; i < MOTORS; i++)
-  {
-    motors[i].runSpeed();
   }
 }
