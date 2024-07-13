@@ -14,6 +14,9 @@
 #include <Preferences.h>
 #include <ArduinoJson.h>
 #include <nvs_flash.h>
+#include <thread>
+#include <assert.h>
+#include "esp_pthread.h"
 #include "CCSettings.h"
 #include "AudioController.h"
 #include "FireController.h"
@@ -63,10 +66,6 @@ constexpr float STEPPER_SPS = 2048 / 60; // steps per second for one revolution
 AccelStepper motors[1] = {AccelStepper(AccelStepper::FULL4WIRE, STEPPER1_IN1, STEPPER1_IN3, STEPPER1_IN2, STEPPER1_IN4)};
 
 Preferences preferences;
-
-// Use both cores
-TaskHandle_t Task1;
-TaskHandle_t Task2;
 
 // Get Slider Values
 String getSliderValues()
@@ -281,54 +280,11 @@ void initWebSocket()
   server.addHandler(&ws);
 }
 
-// See https://randomnerdtutorials.com/esp32-dual-core-arduino-ide/ for multicore usage
-// Core 0
-void Task2code(void *pvParameters)
+void *audioThread(void *p)
 {
-  Serial.print("Task1 running on core ");
-  Serial.println(xPortGetCoreID());
-  for (;;)
-  {
-    // OTA
-    ArduinoOTA.handle();
-
-    // Stepper
-    for (int i = 0; i < MOTORS; i++)
-    {
-      motors[i].runSpeed();
-    }
-
-    // Fire
-    fireController.animate(ccSettings[0].intSettings["aType"][0]);
-
-    // Webserver
-    ws.cleanupClients();
-
-    // loop to blink
-    if (millis() - previousMillis > interval)
-    { // save the last time you blinked the LED
-      previousMillis = millis();
-      // if the LED is off turn it on and vice-versa:
-      ledState = not(ledState);
-      // set the LED with the ledState of the variable:
-      digitalWrite(led, ledState);
-
-      Serial.print("Preferences: ");
-      serializeJsonPretty(ccSettings[0].toJSON(), Serial);
-    }
-  }
-}
-
-// Core 1
-void Task1code(void *pvParameters)
-{
-  Serial.print("Task2 running on core ");
-  Serial.println(xPortGetCoreID());
-  for (;;)
-  {
-    // Audio
+  while (true)
     audioController.loop();
-  }
+  return NULL;
 }
 
 void setup()
@@ -434,29 +390,52 @@ void setup()
   Serial.println("Settings on boot:");
   serializeJsonPretty(ccSettings[0].toJSON(), Serial);
 
-  // Creating tasks for both cores
-  xTaskCreatePinnedToCore(
-      Task1code, /* Task function. */
-      "Task1",   /* name of task. */
-      10000,     /* Stack size of task */
-      NULL,      /* parameter of the task */
-      1,         /* priority of the task */
-      &Task1,    /* Task handle to keep track of created task */
-      0);        /* pin task to core 0 */
-  delay(500);
-
-  // create a task that will be executed in the Task2code() function, with priority 1 and executed on core 1
-  xTaskCreatePinnedToCore(
-      Task2code, /* Task function. */
-      "Task2",   /* name of task. */
-      10000,     /* Stack size of task */
-      NULL,      /* parameter of the task */
-      1,         /* priority of the task */
-      &Task2,    /* Task handle to keep track of created task */
-      1);        /* pin task to core 1 */
-  delay(500);
+  // Retrieve current thread configuration
+  esp_pthread_cfg_t threadConf = esp_pthread_get_default_config();
+  // Serial.println("Result ERROR");
+  // Serial.println(result);
+  // Serial.println(esp_err_to_name(result));
+  // assert(ESP_OK == result);
+  // Configure a rather big default stack size for new threads
+  threadConf.stack_size = 24 * 1024;
+  auto result = esp_pthread_set_cfg(&threadConf);
+  assert(ESP_OK == result);
+  // Launch a new task, the lambda with audio loop is executed there
+  // std::thread audioThread([]()
+  //                        { while (true) audioController.loop(); });
+  // audioThread.detach();
+  pthread_t t2;
+  pthread_create(&t2, NULL, &audioThread, NULL);
+  pthread_detach(t2);
 }
 
 void loop()
 {
+  // OTA
+  ArduinoOTA.handle();
+
+  // Stepper
+  for (int i = 0; i < MOTORS; i++)
+  {
+    motors[i].runSpeed();
+  }
+
+  // Fire
+  fireController.animate(ccSettings[0].intSettings["aType"][0]);
+
+  // Webserver
+  ws.cleanupClients();
+
+  // loop to blink
+  if (millis() - previousMillis > interval)
+  { // save the last time you blinked the LED
+    previousMillis = millis();
+    // if the LED is off turn it on and vice-versa:
+    ledState = not(ledState);
+    // set the LED with the ledState of the variable:
+    digitalWrite(led, ledState);
+
+    Serial.print("Preferences: ");
+    serializeJsonPretty(ccSettings[0].toJSON(), Serial);
+  }
 }
